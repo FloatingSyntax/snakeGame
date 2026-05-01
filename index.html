@@ -23,7 +23,7 @@
         }
 
         .header { display: flex; justify-content: space-between; width: 95vw; max-width: 400px; margin-bottom: 10px; align-items: center; }
-        .score-board { font-size: 18px; font-weight: bold; display: flex; align-items: center; }
+        .score-board { font-size: 20px; font-weight: bold; }
         .user-info { font-size: 14px; color: #9ca3af; }
         
         .controls { display: flex; gap: 8px; }
@@ -89,17 +89,14 @@
         .leaderboard-list li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color); }
         .rank-user { display: flex; gap: 10px; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
     <div class="header">
         <div>
             <div class="user-info" id="displayUsername">Not playing</div>
-            <div class="score-board">
-                <span id="hpDisplay" style="display: inline-flex; gap: 4px; margin-right: 8px;"></span> 
-                <span style="color: var(--border-color);">|</span> 
-                <span style="margin-left: 8px;">Score: <span id="score">0</span></span>
-            </div>
+            <div class="score-board">Score: <span id="score">0</span></div>
         </div>
         <div class="controls">
             <button onclick="openModal('settingsModal')">⚙️</button>
@@ -119,6 +116,7 @@
     <div id="nameModal" class="modal">
         <div class="modal-content">
             <h2>Welcome</h2>
+            <p style="font-size: 12px; color: #9ca3af;">Enter your player name to join the leaderboard.</p>
             <div class="input-group">
                 <input type="text" id="playerNameInput" placeholder="Enter your name" maxlength="15">
             </div>
@@ -140,14 +138,14 @@
             <div class="input-group">
                 <label>Snake Color</label>
                 <select id="colorSelect" onchange="updateSettings()">
-                    <option value="blue">Aqua Force (Blue to Cyan)</option>
-                    <option value="fire">Dragon Fire (Red to Yellow)</option>
-                    <option value="neon">Cyberpunk (Purple to Pink)</option>
-                    <option value="toxic">Toxic Waste (Green to Lime)</option>
-                    <option value="sunset">Miami Sunset (Orange to Pink)</option>
-                    <option value="vapor">Vaporwave (Cyan to Purple)</option>
-                    <option value="electric">Electric Surge (Yellow to Cyan)</option>
-                    <option value="berry">Wild Berry (Pink to Purple)</option>
+                    <option value="blue">Blue to Cyan</option>
+                    <option value="red">Red to Orange</option>
+                    <option value="purple">Purple to Pink</option>
+                    <option value="green">Green to Lime</option>
+                    <option value="orange">Orange to Yellow</option>
+                    <option value="pink">Pink to Purple</option>
+                    <option value="yellow">Yellow to Cyan</option>
+                    <option value="cyan">Cyan to Green</option>
                 </select>
             </div>
             <button style="width: 100%; margin-top: 10px;" onclick="closeModal('settingsModal')">Done</button>
@@ -157,7 +155,7 @@
 
     <div id="leaderboardModal" class="modal">
         <div class="modal-content">
-            <h2>Top 5 High Scores</h2>
+            <h2>Top 5 Global Scores</h2>
             <div class="tabs">
                 <button class="tab-btn active" id="tab-EASY" onclick="switchTab('EASY')">Easy</button>
                 <button class="tab-btn" id="tab-HARD" onclick="switchTab('HARD')">Hard</button>
@@ -168,25 +166,25 @@
     </div>
 
     <script>
-        // --- MINECRAFT PIXEL HEARTS ---
-        const mcHeartFull = `<svg width="20" height="20" viewBox="0 0 10 10" style="image-rendering: pixelated;"><path d="M2,1h2v1h-2zM6,1h2v1h-2zM1,2h1v1h-1zM4,2h2v1h-2zM8,2h1v1h-1zM0,3h1v3h-1zM9,3h1v3h-1zM1,6h1v1h-1zM8,6h1v1h-1zM2,7h1v1h-1zM7,7h1v1h-1zM3,8h1v1h-1zM6,8h1v1h-1zM4,9h2v1h-2z" fill="#000"/><path d="M2,2h2v1h-2zM6,2h2v1h-2zM1,3h8v3h-8zM2,6h6v1h-6zM3,7h4v1h-4zM4,8h2v1h-2z" fill="#ff1111"/><path d="M2,2h1v1h-1zM1,3h1v1h-1z" fill="#fff"/></svg>`;
-        const mcHeartEmpty = `<svg width="20" height="20" viewBox="0 0 10 10" style="image-rendering: pixelated;"><path d="M2,1h2v1h-2zM6,1h2v1h-2zM1,2h1v1h-1zM4,2h2v1h-2zM8,2h1v1h-1zM0,3h1v3h-1zM9,3h1v3h-1zM1,6h1v1h-1zM8,6h1v1h-1zM2,7h1v1h-1zM7,7h1v1h-1zM3,8h1v1h-1zM6,8h1v1h-1zM4,9h2v1h-2z" fill="#000"/><path d="M2,2h2v1h-2zM6,2h2v1h-2zM1,3h8v3h-8zM2,6h6v1h-6zM3,7h4v1h-4zM4,8h2v1h-2z" fill="#2b2b2b"/><path d="M2,2h1v1h-1zM1,3h1v1h-1z" fill="#444"/></svg>`;
-
-        function updateHPDisplay() {
-            const hpDisplay = document.getElementById("hpDisplay");
-            if (hp === 2) hpDisplay.innerHTML = mcHeartFull + mcHeartFull;
-            else if (hp === 1) hpDisplay.innerHTML = mcHeartFull + mcHeartEmpty;
-            else hpDisplay.innerHTML = mcHeartEmpty + mcHeartEmpty;
-        }
+        // --- SUPABASE CONFIGURATION ---
+        // ⚠️ PASTE YOUR KEYS HERE! ⚠️
+        const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL'; 
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // --- NAME SYSTEM ---
         let currentUser = localStorage.getItem('snakePlayerName');
-        if (!currentUser) document.getElementById('nameModal').style.display = 'flex';
-        else document.getElementById('displayUsername').innerText = `Player: ${currentUser}`;
+        
+        if (!currentUser) {
+            document.getElementById('nameModal').style.display = 'flex';
+        } else {
+            document.getElementById('displayUsername').innerText = `Player: ${currentUser}`;
+        }
 
         function saveName() {
             const name = document.getElementById('playerNameInput').value.trim();
             if (!name) return document.getElementById('nameError').innerText = "Name cannot be empty!";
+            
             currentUser = name;
             localStorage.setItem('snakePlayerName', name);
             document.getElementById('nameModal').style.display = 'none';
@@ -212,9 +210,10 @@
         
         let gameState = 'WAITING'; // WAITING, PLAYING, DEAD, PAUSED
         let score = 0;
-        let hp = 2;
         let difficulty = "easy";
         let activeColorKey = "blue";
+        
+        // Speed adjusted! Easy = 2px/frame, Hard = 4px/frame
         let speed = 2; 
         
         let currentDir = 'RIGHT';
@@ -228,20 +227,15 @@
         let mines = [];
         let particles = [];
 
-        // Animation Timers
-        let dizzyTimer = 0;
-        let invulnTimer = 0;
-        let deathTimer = 0;
-
         const colorThemes = {
             blue: { h1: 220, h2: 180, s: '100%', l: '60%' },
-            fire: { h1: 0, h2: 60, s: '100%', l: '55%' },
-            neon: { h1: 280, h2: 330, s: '100%', l: '60%' },
-            toxic: { h1: 130, h2: 70, s: '100%', l: '50%' },
-            sunset: { h1: 25, h2: 320, s: '100%', l: '60%' },
-            vapor: { h1: 180, h2: 280, s: '100%', l: '65%' },
-            electric: { h1: 60, h2: 180, s: '100%', l: '55%' },
-            berry: { h1: 340, h2: 270, s: '100%', l: '60%' }
+            red: { h1: 0, h2: 30, s: '100%', l: '55%' },
+            purple: { h1: 280, h2: 330, s: '100%', l: '60%' },
+            green: { h1: 130, h2: 70, s: '100%', l: '50%' },
+            orange: { h1: 25, h2: 50, s: '100%', l: '60%' },
+            pink: { h1: 340, h2: 270, s: '100%', l: '65%' },
+            yellow: { h1: 60, h2: 180, s: '100%', l: '55%' },
+            cyan: { h1: 180, h2: 120, s: '100%', l: '60%' }
         };
 
         // --- CONTROLS LOGIC ---
@@ -266,6 +260,14 @@
 
         document.addEventListener("keydown", (e) => {
             const key = e.keyCode;
+            const arrows = [37, 38, 39, 40];
+            const wasd = [65, 87, 68, 83];
+            
+            if (gameState === 'DEAD' && (arrows.includes(key) || wasd.includes(key))) {
+                restartGame();
+                return;
+            }
+
             if (key === 37 || key === 65) setDirection('LEFT');
             if (key === 38 || key === 87) setDirection('UP');
             if (key === 39 || key === 68) setDirection('RIGHT');
@@ -287,57 +289,53 @@
 
             if (gameState === 'PLAYING') {
                 updatePhysics();
-                updateParticles(1.0);
-                if (dizzyTimer > 0) dizzyTimer--;
-                if (invulnTimer > 0) invulnTimer--;
+                updateParticles();
             } else if (gameState === 'DEAD') {
-                updateParticles(0.2); 
-                deathTimer++;
-                if (deathTimer === 150) {
-                    canvas.addEventListener('click', handleRestartClick);
-                }
+                updateParticles(); // Let death animation finish
             }
 
             renderGraphics();
             animationId = requestAnimationFrame(gameLoop);
         }
 
-        function takeDamage() {
-            if (invulnTimer > 0) return; 
-            
-            hp--;
-            updateHPDisplay();
-
-            if (hp <= 0) {
-                gameState = 'DEAD';
-                deathTimer = 0;
-                saveLeaderboard(score);
-            } else {
-                dizzyTimer = 180; 
-                invulnTimer = 60; 
-            }
-        }
-
         function createExplosion(x, y, color) {
-            for(let i=0; i<30; i++) {
+            for(let i=0; i<75; i++) {
                 let angle = Math.random() * Math.PI * 2;
-                let force = Math.random() * 5 + 1;
+                let force = Math.random() * 8 + 2;
+                let col = ['#e74c3c', '#e67e22', '#f1c40f'][Math.floor(Math.random()*3)]; // Fire colors
                 particles.push({
                     x: x, y: y,
                     vx: Math.cos(angle) * force,
                     vy: Math.sin(angle) * force,
                     life: 1.0,
-                    color: color
+                    col: col,
+                    size: size/4 + Math.random()*2
                 });
             }
         }
 
-        function updateParticles(timeScale) {
+        function createBloodSplat(x, y) {
+            for(let i=0; i<15; i++) {
+                let angle = Math.random() * Math.PI * 2;
+                let force = Math.random() * 3 + 1;
+                particles.push({
+                    x: x, y: y,
+                    vx: Math.cos(angle) * force,
+                    vy: Math.sin(angle) * force + 2, // Drop down
+                    life: 1.0,
+                    col: `rgba(220, 20, 20, 0.6)`,
+                    size: size/5 + Math.random()
+                });
+            }
+        }
+
+        function updateParticles() {
             for(let i = particles.length - 1; i >= 0; i--) {
                 let p = particles[i];
-                p.x += p.vx * timeScale;
-                p.y += p.vy * timeScale;
-                p.life -= 0.03 * timeScale;
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.95; p.vy *= 0.95; // Frict
+                if (gameState === 'PLAYING' || gameState === 'DEAD') p.life -= 0.015;
                 if (p.life <= 0) particles.splice(i, 1);
             }
         }
@@ -351,42 +349,14 @@
                 else if (currentDir === 'DOWN') { snake.vx = 0; snake.vy = speed; }
             }
 
-            let nextX = snake.x + snake.vx;
-            let nextY = snake.y + snake.vy;
-
-            // 1. Wall Collision (Bounce back)
-            if (nextX < 0 || nextX > canvas.width - size || nextY < 0 || nextY > canvas.height - size) {
-                takeDamage();
-                if (hp > 0) {
-                    if (snake.vx > 0) { currentDir = 'LEFT'; queuedDir = 'LEFT'; snake.vx = -speed; }
-                    else if (snake.vx < 0) { currentDir = 'RIGHT'; queuedDir = 'RIGHT'; snake.vx = speed; }
-                    else if (snake.vy > 0) { currentDir = 'UP'; queuedDir = 'UP'; snake.vy = -speed; }
-                    else if (snake.vy < 0) { currentDir = 'DOWN'; queuedDir = 'DOWN'; snake.vy = speed; }
-                    return; 
-                } else {
-                    snake.vx = 0; snake.vy = 0;
-                }
-            } else {
-                snake.x = nextX;
-                snake.y = nextY;
-            }
+            snake.x += snake.vx;
+            snake.y += snake.vy;
 
             pathHistory.unshift({x: snake.x, y: snake.y});
             let spacing = size / speed; 
             if (pathHistory.length > snakeLength * spacing + 1) pathHistory.pop();
 
-            // 2. Body Collision
-            if (snake.x % size === 0 && snake.y % size === 0 && invulnTimer <= 0) {
-                for (let i = 2; i < snakeLength; i++) {
-                    let index = i * spacing;
-                    if (index < pathHistory.length && snake.x === pathHistory[index].x && snake.y === pathHistory[index].y) {
-                        takeDamage();
-                        break;
-                    }
-                }
-            }
-
-            // 3. Apple Collision
+            // Food Collision
             if (snake.x === food.x && snake.y === food.y) {
                 score += 10;
                 scoreElement.innerHTML = score;
@@ -395,15 +365,36 @@
                 if (difficulty === 'hard') generateMine();
             }
 
-            // 4. Mine Collision
+            // Mine Collision
             let cx = snake.x + size/2;
             let cy = snake.y + size/2;
             let hitMineIndex = mines.findIndex(m => Math.hypot((m.x + size/2) - cx, (m.y + size/2) - cy) < size * 0.8);
             
             if (hitMineIndex !== -1) {
-                createExplosion(mines[hitMineIndex].x + size/2, mines[hitMineIndex].y + size/2, '#ff0044');
+                gameState = 'DEAD';
+                saveLeaderboard(score);
+                createExplosion(mines[hitMineIndex].x + size/2, mines[hitMineIndex].y + size/2);
                 mines.splice(hitMineIndex, 1);
-                takeDamage();
+            }
+
+            // Wall Collision
+            if (snake.x < 0 || snake.x >= canvas.width || snake.y < 0 || snake.y >= canvas.height) {
+                gameState = 'DEAD';
+                saveLeaderboard(score);
+            }
+
+            // Self Collision
+            if (snake.x % size === 0 && snake.y % size === 0) {
+                for (let i = 2; i < snakeLength; i++) {
+                    let index = i * spacing;
+                    if (index < pathHistory.length) {
+                        if (snake.x === pathHistory[index].x && snake.y === pathHistory[index].y) {
+                            gameState = 'DEAD';
+                            saveLeaderboard(score);
+                            createBloodSplat(snake.x + size/2, snake.y + size/2);
+                        }
+                    }
+                }
             }
         }
 
@@ -429,22 +420,20 @@
 
             // Particles
             particles.forEach(p => {
-                ctx.fillStyle = p.color;
+                ctx.fillStyle = p.col;
                 ctx.globalAlpha = p.life;
-                ctx.fillRect(p.x, p.y, 4, 4);
+                ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
             });
             ctx.globalAlpha = 1.0;
 
             // Snake
             let spacing = size / speed; 
             let theme = colorThemes[activeColorKey];
-            
-            // Flash if invulnerable
-            if (invulnTimer > 0 && Math.floor(Date.now() / 100) % 2 === 0) ctx.globalAlpha = 0.4;
 
             for (let i = snakeLength - 1; i >= 0; i--) {
                 let index = i * spacing;
-                if (index >= pathHistory.length) continue;
+                if (index >= pathHistory.length) break;
+                
                 let pos = pathHistory[index];
                 
                 let ratio = i / snakeLength;
@@ -455,27 +444,23 @@
 
                 // Head & Eyes
                 if (i === 0) {
-                    ctx.fillStyle = '#000000';
                     let d = 4.5; let ex1, ey1, ex2, ey2;
                     if (currentDir === 'RIGHT') { ex1 = d; ey1 = -d; ex2 = d; ey2 = d; }
                     else if (currentDir === 'LEFT') { ex1 = -d; ey1 = -d; ex2 = -d; ey2 = d; }
                     else if (currentDir === 'UP') { ex1 = -d; ey1 = -d; ex2 = d; ey2 = -d; }
                     else if (currentDir === 'DOWN') { ex1 = -d; ey1 = d; ex2 = d; ey2 = d; }
 
-                    ctx.beginPath(); ctx.arc(pos.x + size/2 + ex1, pos.y + size/2 + ey1, 2.5, 0, Math.PI*2); ctx.fill();
-                    ctx.beginPath(); ctx.arc(pos.x + size/2 + ex2, pos.y + size/2 + ey2, 2.5, 0, Math.PI*2); ctx.fill();
-                }
-            }
-            ctx.globalAlpha = 1.0;
-
-            // Dizzy Stars
-            if (dizzyTimer > 0 && gameState !== 'DEAD') {
-                ctx.fillStyle = '#fbbf24';
-                for (let i=0; i<3; i++) {
-                    let angle = (Date.now() / 200) + (i * Math.PI * 2 / 3);
-                    let sx = snake.x + size/2 + Math.cos(angle) * 12;
-                    let sy = snake.y - 4 + Math.sin(angle) * 6;
-                    ctx.fillRect(sx, sy, 4, 4);
+                    if (gameState === 'DEAD') {
+                        ctx.strokeStyle = 'white'; ctx.lineWidth = 1;
+                        ctx.beginPath(); ctx.moveTo(pos.x + size/2 + ex1 - 1.5, pos.y + size/2 + ey1 - 1.5); ctx.lineTo(pos.x + size/2 + ex1 + 1.5, pos.y + size/2 + ey1 + 1.5);
+                        ctx.moveTo(pos.x + size/2 + ex1 + 1.5, pos.y + size/2 + ey1 - 1.5); ctx.lineTo(pos.x + size/2 + ex1 - 1.5, pos.y + size/2 + ey1 + 1.5); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(pos.x + size/2 + ex2 - 1.5, pos.y + size/2 + ey2 - 1.5); ctx.lineTo(pos.x + size/2 + ex2 + 1.5, pos.y + size/2 + ey2 + 1.5);
+                        ctx.moveTo(pos.x + size/2 + ex2 + 1.5, pos.y + size/2 + ey2 - 1.5); ctx.lineTo(pos.x + size/2 + ex2 - 1.5, pos.y + size/2 + ey2 + 1.5); ctx.stroke();
+                    } else {
+                        ctx.fillStyle = '#000000';
+                        ctx.beginPath(); ctx.arc(pos.x + size/2 + ex1, pos.y + size/2 + ey1, 2.5, 0, Math.PI*2); ctx.fill();
+                        ctx.beginPath(); ctx.arc(pos.x + size/2 + ex2, pos.y + size/2 + ey2, 2.5, 0, Math.PI*2); ctx.fill();
+                    }
                 }
             }
 
@@ -487,22 +472,22 @@
             }
 
             if (gameState === 'DEAD') {
-                ctx.fillStyle = `rgba(0, 0, 0, ${Math.min(0.6, deathTimer * 0.01)})`;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                ctx.fillStyle = `rgba(220, 20, 20, ${Math.min(1, deathTimer * 0.02)})`;
-                ctx.font = `900 ${Math.min(55, 30 + deathTimer * 0.3)}px "Arial Black", Impact, sans-serif`;
+                // Dim rest
+                ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0,0,canvas.width, canvas.height);
+                // Band
+                ctx.fillStyle = 'rgba(20, 30, 25, 0.7)'; ctx.fillRect(0, canvas.height/2 - 40, canvas.width, 80);
+                // Text
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 45px "Arial Black", Gadget, sans-serif';
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText("WASTED", canvas.width/2, canvas.height/2);
-                
-                if (deathTimer > 150) {
-                    ctx.font = "16px Arial"; ctx.fillStyle = "white";
-                    ctx.fillText("Tap or Click to Restart", canvas.width/2, canvas.height/2 + 50);
-                }
+                ctx.fillText('WASTED', canvas.width/2, canvas.height/2);
+                // Subtext
+                ctx.font = "16px Arial";
+                ctx.fillText("Use Arrow Keys or WASD to Restart", canvas.width/2, canvas.height/2 + 55);
             }
         }
 
-        // --- ENTITY GENERATION ---
+        // --- SPAM ---
         function generateFood() {
             let valid = false;
             while(!valid) {
@@ -525,31 +510,19 @@
             mines.push({x: mineX, y: mineY});
         }
 
-        // --- CORE RESETS ---
-        function handleRestartClick() {
-            canvas.removeEventListener('click', handleRestartClick);
-            restartGame();
-        }
-
         function restartGame() {
             if (!currentUser) return;
             cancelAnimationFrame(animationId);
             
             gameState = 'WAITING';
             score = 0; scoreElement.innerHTML = score;
-            hp = 2; updateHPDisplay();
-            
-            speed = (difficulty === 'hard') ? 4 : 2; 
+            speed = (difficulty === 'hard') ? 4 : 2; // New adjusted speeds
             currentDir = 'RIGHT'; queuedDir = 'RIGHT';
             snake = { x: 200, y: 200, vx: 0, vy: 0 };
-            
             pathHistory = [{x:200, y:200}]; 
             snakeLength = 4;
             mines = [];
             particles = [];
-            
-            dizzyTimer = 0; invulnTimer = 0; deathTimer = 0;
-
             generateFood();
             requestAnimationFrame(gameLoop);
         }
@@ -560,12 +533,15 @@
         function openModal(id) { 
             gameState = 'PAUSED'; 
             document.getElementById(id).style.display = "flex"; 
-            if(id === 'leaderboardModal') switchTab(difficulty.toUpperCase()); 
+            if(id === 'leaderboardModal') {
+                switchTab(difficulty.toUpperCase()); // Open to current mode
+            }
         }
         
         function closeModal(id) { 
             document.getElementById(id).style.display = "none"; 
-            if(currentUser && hp > 0) { 
+            if(currentUser && gameState !== 'DEAD') { 
+                // Only go back to WAITING/PLAYING if alive
                 gameState = (snake.vx === 0 && snake.vy === 0) ? 'WAITING' : 'PLAYING';
                 requestAnimationFrame(gameLoop); 
             } 
@@ -583,6 +559,7 @@
             if(gameState === 'PAUSED' && pathHistory.length > 0) renderGraphics(); 
         }
 
+        // --- GLOBAL LEADERBOARD TABS ---
         function switchTab(mode) {
             currentLeaderboardTab = mode;
             document.getElementById('tab-EASY').classList.toggle('active', mode === 'EASY');
@@ -590,42 +567,65 @@
             loadLeaderboardUI();
         }
 
-        function saveLeaderboard(currentScore) {
+        async function saveLeaderboard(currentScore) {
             if (currentScore === 0 || !currentUser) return;
-            let scores = JSON.parse(localStorage.getItem('snakeLocalScores')) || [];
+            
             let currentMode = difficulty.toUpperCase();
-            let existingPlayerIndex = scores.findIndex(entry => entry.username === currentUser && entry.mode === currentMode);
             
-            if (existingPlayerIndex !== -1) {
-                if (currentScore > scores[existingPlayerIndex].score) scores[existingPlayerIndex].score = currentScore;
+            const { data: existingData, error: fetchError } = await supabase
+                .from('global_leaderboard')
+                .select('*')
+                .eq('username', currentUser)
+                .eq('mode', currentMode);
+
+            if (fetchError) { console.error("Fetch Error:", fetchError); return; }
+
+            if (existingData && existingData.length > 0) {
+                if (currentScore > existingData[0].score) {
+                    await supabase
+                        .from('global_leaderboard')
+                        .update({ score: currentScore })
+                        .eq('username', currentUser)
+                        .eq('mode', currentMode);
+                }
             } else {
-                scores.push({ username: currentUser, score: currentScore, mode: currentMode });
+                await supabase
+                    .from('global_leaderboard')
+                    .insert([{ username: currentUser, score: currentScore, mode: currentMode }]);
             }
-            
-            scores.sort((a, b) => b.score - a.score);
-            localStorage.setItem('snakeLocalScores', JSON.stringify(scores));
         }
 
-        function loadLeaderboardUI() {
+        async function loadLeaderboardUI() {
             const list = document.getElementById('leaderboardList');
-            list.innerHTML = ""; 
-            let scores = JSON.parse(localStorage.getItem('snakeLocalScores')) || [];
-            let filteredScores = scores.filter(entry => entry.mode === currentLeaderboardTab);
-            let top5 = filteredScores.slice(0, 5);
+            list.innerHTML = "<li>Loading...</li>"; 
             
-            if(top5.length === 0) return list.innerHTML = `<li>No ${currentLeaderboardTab.toLowerCase()} scores yet!</li>`;
+            const { data: scores, error } = await supabase
+                .from('global_leaderboard')
+                .select('*')
+                .eq('mode', currentLeaderboardTab)
+                .order('score', { ascending: false }) 
+                .limit(5); 
 
-            top5.forEach((entry, index) => {
+            if (error) return list.innerHTML = "<li>Failed to load leaderboard.</li>";
+
+            list.innerHTML = "";
+            if(scores.length === 0) return list.innerHTML = "<li>No scores yet!</li>";
+
+            scores.forEach((entry, index) => {
                 const li = document.createElement('li');
                 li.innerHTML = `<div class="rank-user"><strong>#${index + 1}</strong> <span>${entry.username}</span></div>
-                                <div><strong>${entry.score} pts</strong></div>`;
+                                <div class="score-mode"><strong>${entry.score} pts</strong></div>`;
                 list.appendChild(li);
             });
         }
 
         // --- STARTUP LOGIC ---
-        if (currentUser) restartGame();
-        else { generateFood(); updateHPDisplay(); renderGraphics(); }
+        if (currentUser) {
+            restartGame();
+        } else {
+            generateFood();
+            renderGraphics();
+        }
     </script>
 </body>
 </html>
