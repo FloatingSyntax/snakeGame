@@ -1,3 +1,4 @@
+## Snake Game 🐍
 A modern, pure-JS take on the classic. Built on pure vibes, and it will only keep getting better.
 
 ## Features
