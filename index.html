@@ -23,7 +23,7 @@
         }
 
         .header { display: flex; justify-content: space-between; width: 95vw; max-width: 400px; margin-bottom: 10px; align-items: center; }
-        .score-board { font-size: 20px; font-weight: bold; }
+        .score-board { font-size: 18px; font-weight: bold; display: flex; align-items: center; }
         .user-info { font-size: 14px; color: #9ca3af; }
         
         .controls { display: flex; gap: 8px; }
@@ -95,7 +95,11 @@
     <div class="header">
         <div>
             <div class="user-info" id="displayUsername">Not playing</div>
-            <div class="score-board">Score: <span id="score">0</span></div>
+            <div class="score-board">
+                <span id="hpDisplay" style="display: inline-flex; gap: 4px; margin-right: 8px;"></span> 
+                <span style="color: var(--border-color);">|</span> 
+                <span style="margin-left: 8px;">Score: <span id="score">0</span></span>
+            </div>
         </div>
         <div class="controls">
             <button onclick="openModal('settingsModal')">⚙️</button>
@@ -115,7 +119,6 @@
     <div id="nameModal" class="modal">
         <div class="modal-content">
             <h2>Welcome</h2>
-            <p style="font-size: 12px; color: #9ca3af;">Enter your player name.</p>
             <div class="input-group">
                 <input type="text" id="playerNameInput" placeholder="Enter your name" maxlength="15">
             </div>
@@ -165,19 +168,25 @@
     </div>
 
     <script>
+        // --- MINECRAFT PIXEL HEARTS ---
+        const mcHeartFull = `<svg width="20" height="20" viewBox="0 0 10 10" style="image-rendering: pixelated;"><path d="M2,1h2v1h-2zM6,1h2v1h-2zM1,2h1v1h-1zM4,2h2v1h-2zM8,2h1v1h-1zM0,3h1v3h-1zM9,3h1v3h-1zM1,6h1v1h-1zM8,6h1v1h-1zM2,7h1v1h-1zM7,7h1v1h-1zM3,8h1v1h-1zM6,8h1v1h-1zM4,9h2v1h-2z" fill="#000"/><path d="M2,2h2v1h-2zM6,2h2v1h-2zM1,3h8v3h-8zM2,6h6v1h-6zM3,7h4v1h-4zM4,8h2v1h-2z" fill="#ff1111"/><path d="M2,2h1v1h-1zM1,3h1v1h-1z" fill="#fff"/></svg>`;
+        const mcHeartEmpty = `<svg width="20" height="20" viewBox="0 0 10 10" style="image-rendering: pixelated;"><path d="M2,1h2v1h-2zM6,1h2v1h-2zM1,2h1v1h-1zM4,2h2v1h-2zM8,2h1v1h-1zM0,3h1v3h-1zM9,3h1v3h-1zM1,6h1v1h-1zM8,6h1v1h-1zM2,7h1v1h-1zM7,7h1v1h-1zM3,8h1v1h-1zM6,8h1v1h-1zM4,9h2v1h-2z" fill="#000"/><path d="M2,2h2v1h-2zM6,2h2v1h-2zM1,3h8v3h-8zM2,6h6v1h-6zM3,7h4v1h-4zM4,8h2v1h-2z" fill="#2b2b2b"/><path d="M2,2h1v1h-1zM1,3h1v1h-1z" fill="#444"/></svg>`;
+
+        function updateHPDisplay() {
+            const hpDisplay = document.getElementById("hpDisplay");
+            if (hp === 2) hpDisplay.innerHTML = mcHeartFull + mcHeartFull;
+            else if (hp === 1) hpDisplay.innerHTML = mcHeartFull + mcHeartEmpty;
+            else hpDisplay.innerHTML = mcHeartEmpty + mcHeartEmpty;
+        }
+
         // --- NAME SYSTEM ---
         let currentUser = localStorage.getItem('snakePlayerName');
-        
-        if (!currentUser) {
-            document.getElementById('nameModal').style.display = 'flex';
-        } else {
-            document.getElementById('displayUsername').innerText = `Player: ${currentUser}`;
-        }
+        if (!currentUser) document.getElementById('nameModal').style.display = 'flex';
+        else document.getElementById('displayUsername').innerText = `Player: ${currentUser}`;
 
         function saveName() {
             const name = document.getElementById('playerNameInput').value.trim();
             if (!name) return document.getElementById('nameError').innerText = "Name cannot be empty!";
-            
             currentUser = name;
             localStorage.setItem('snakePlayerName', name);
             document.getElementById('nameModal').style.display = 'none';
@@ -190,7 +199,7 @@
             document.getElementById('displayUsername').innerText = "Not playing";
             closeModal('settingsModal');
             document.getElementById('nameModal').style.display = 'flex';
-            isPaused = true;
+            gameState = 'PAUSED';
         }
 
         // --- GAME ENGINE ---
@@ -199,27 +208,31 @@
         const scoreElement = document.getElementById("score");
 
         const size = 20; 
-        let isPaused = true;
         let animationId;
         
+        let gameState = 'WAITING'; // WAITING, PLAYING, DEAD, PAUSED
         let score = 0;
+        let hp = 2;
         let difficulty = "easy";
         let activeColorKey = "blue";
-        
-        // Speed adjusted! Easy = 2px/frame, Hard = 4px/frame
         let speed = 2; 
         
         let currentDir = 'RIGHT';
         let queuedDir = 'RIGHT';
 
-        let snake = { x: 200, y: 200, vx: speed, vy: 0 };
+        let snake = { x: 200, y: 200, vx: 0, vy: 0 };
         let pathHistory = []; 
         let snakeLength = 4;
 
         let food = {x: 0, y: 0};
         let mines = [];
+        let particles = [];
 
-        // Gradient color palettes mapped by Hue
+        // Animation Timers
+        let dizzyTimer = 0;
+        let invulnTimer = 0;
+        let deathTimer = 0;
+
         const colorThemes = {
             blue: { h1: 220, h2: 180, s: '100%', l: '60%' },
             fire: { h1: 0, h2: 60, s: '100%', l: '55%' },
@@ -233,7 +246,18 @@
 
         // --- CONTROLS LOGIC ---
         function setDirection(newDir) {
-            if (!currentUser) return;
+            if (!currentUser || gameState === 'DEAD' || gameState === 'PAUSED') return;
+            
+            if (gameState === 'WAITING') {
+                gameState = 'PLAYING';
+                currentDir = newDir; queuedDir = newDir;
+                if (newDir === 'RIGHT') snake.vx = speed;
+                if (newDir === 'LEFT') snake.vx = -speed;
+                if (newDir === 'UP') snake.vy = -speed;
+                if (newDir === 'DOWN') snake.vy = speed;
+                return;
+            }
+
             if (newDir === 'LEFT' && currentDir !== 'RIGHT') queuedDir = 'LEFT';
             if (newDir === 'UP' && currentDir !== 'DOWN') queuedDir = 'UP';
             if (newDir === 'RIGHT' && currentDir !== 'LEFT') queuedDir = 'RIGHT';
@@ -254,48 +278,115 @@
             btn.addEventListener('touchstart', handler, {passive: false});
             btn.addEventListener('mousedown', handler);
         };
-        
-        setupMobileBtn('btn-up', 'UP');
-        setupMobileBtn('btn-left', 'LEFT');
-        setupMobileBtn('btn-right', 'RIGHT');
-        setupMobileBtn('btn-down', 'DOWN');
+        setupMobileBtn('btn-up', 'UP'); setupMobileBtn('btn-left', 'LEFT');
+        setupMobileBtn('btn-right', 'RIGHT'); setupMobileBtn('btn-down', 'DOWN');
 
+        // --- GAME LOOP ---
         function gameLoop() {
-            if (isPaused || !currentUser) return;
+            if (!currentUser || gameState === 'PAUSED') return;
 
-            updatePhysics();
-            
-            if (hasGameEnded()) {
-                saveLeaderboard(score);
-                drawGameOver();
-                return;
+            if (gameState === 'PLAYING') {
+                updatePhysics();
+                updateParticles(1.0);
+                if (dizzyTimer > 0) dizzyTimer--;
+                if (invulnTimer > 0) invulnTimer--;
+            } else if (gameState === 'DEAD') {
+                updateParticles(0.2); 
+                deathTimer++;
+                if (deathTimer === 150) {
+                    canvas.addEventListener('click', handleRestartClick);
+                }
             }
 
             renderGraphics();
             animationId = requestAnimationFrame(gameLoop);
         }
 
+        function takeDamage() {
+            if (invulnTimer > 0) return; 
+            
+            hp--;
+            updateHPDisplay();
+
+            if (hp <= 0) {
+                gameState = 'DEAD';
+                deathTimer = 0;
+                saveLeaderboard(score);
+            } else {
+                dizzyTimer = 180; 
+                invulnTimer = 60; 
+            }
+        }
+
+        function createExplosion(x, y, color) {
+            for(let i=0; i<30; i++) {
+                let angle = Math.random() * Math.PI * 2;
+                let force = Math.random() * 5 + 1;
+                particles.push({
+                    x: x, y: y,
+                    vx: Math.cos(angle) * force,
+                    vy: Math.sin(angle) * force,
+                    life: 1.0,
+                    color: color
+                });
+            }
+        }
+
+        function updateParticles(timeScale) {
+            for(let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx * timeScale;
+                p.y += p.vy * timeScale;
+                p.life -= 0.03 * timeScale;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
         function updatePhysics() {
             if (snake.x % size === 0 && snake.y % size === 0) {
                 currentDir = queuedDir;
-                
                 if (currentDir === 'RIGHT') { snake.vx = speed; snake.vy = 0; }
                 else if (currentDir === 'LEFT') { snake.vx = -speed; snake.vy = 0; }
                 else if (currentDir === 'UP') { snake.vx = 0; snake.vy = -speed; }
                 else if (currentDir === 'DOWN') { snake.vx = 0; snake.vy = speed; }
             }
 
-            snake.x += snake.vx;
-            snake.y += snake.vy;
+            let nextX = snake.x + snake.vx;
+            let nextY = snake.y + snake.vy;
 
-            pathHistory.unshift({x: snake.x, y: snake.y});
-            
-            let spacing = size / speed; 
-            
-            if (pathHistory.length > snakeLength * spacing + 1) {
-                pathHistory.pop();
+            // 1. Wall Collision (Bounce back)
+            if (nextX < 0 || nextX > canvas.width - size || nextY < 0 || nextY > canvas.height - size) {
+                takeDamage();
+                if (hp > 0) {
+                    if (snake.vx > 0) { currentDir = 'LEFT'; queuedDir = 'LEFT'; snake.vx = -speed; }
+                    else if (snake.vx < 0) { currentDir = 'RIGHT'; queuedDir = 'RIGHT'; snake.vx = speed; }
+                    else if (snake.vy > 0) { currentDir = 'UP'; queuedDir = 'UP'; snake.vy = -speed; }
+                    else if (snake.vy < 0) { currentDir = 'DOWN'; queuedDir = 'DOWN'; snake.vy = speed; }
+                    return; 
+                } else {
+                    snake.vx = 0; snake.vy = 0;
+                }
+            } else {
+                snake.x = nextX;
+                snake.y = nextY;
             }
 
+            pathHistory.unshift({x: snake.x, y: snake.y});
+            let spacing = size / speed; 
+            if (pathHistory.length > snakeLength * spacing + 1) pathHistory.pop();
+
+            // 2. Body Collision
+            if (snake.x % size === 0 && snake.y % size === 0 && invulnTimer <= 0) {
+                for (let i = 2; i < snakeLength; i++) {
+                    let index = i * spacing;
+                    if (index < pathHistory.length && snake.x === pathHistory[index].x && snake.y === pathHistory[index].y) {
+                        takeDamage();
+                        break;
+                    }
+                }
+            }
+
+            // 3. Apple Collision
             if (snake.x === food.x && snake.y === food.y) {
                 score += 10;
                 scoreElement.innerHTML = score;
@@ -303,61 +394,69 @@
                 generateFood();
                 if (difficulty === 'hard') generateMine();
             }
+
+            // 4. Mine Collision
+            let cx = snake.x + size/2;
+            let cy = snake.y + size/2;
+            let hitMineIndex = mines.findIndex(m => Math.hypot((m.x + size/2) - cx, (m.y + size/2) - cy) < size * 0.8);
+            
+            if (hitMineIndex !== -1) {
+                createExplosion(mines[hitMineIndex].x + size/2, mines[hitMineIndex].y + size/2, '#ff0044');
+                mines.splice(hitMineIndex, 1);
+                takeDamage();
+            }
         }
 
         function renderGraphics() {
             ctx.fillStyle = '#1f2937';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Mines
+            // Mines
             mines.forEach(mine => {
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#ff0044';
+                ctx.shadowBlur = 15; ctx.shadowColor = '#ff0044';
                 ctx.fillStyle = '#000000';
-                ctx.beginPath();
-                ctx.arc(mine.x + size/2, mine.y + size/2, size/2.2, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(mine.x + size/2, mine.y + size/2, size/2.2, 0, Math.PI * 2); ctx.fill();
                 
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = (Date.now() % 800 < 400) ? '#ff0044' : '#4a0011';
-                ctx.beginPath();
-                ctx.arc(mine.x + size/2, mine.y + size/2, size/4, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(mine.x + size/2, mine.y + size/2, size/4, 0, Math.PI * 2); ctx.fill();
             });
             ctx.shadowBlur = 0; 
 
-            // Draw Food (Apple)
+            // Food
             ctx.fillStyle = '#10b981';
-            ctx.beginPath();
-            ctx.arc(food.x + size/2, food.y + size/2, size/2.2, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.beginPath(); ctx.arc(food.x + size/2, food.y + size/2, size/2.2, 0, Math.PI * 2); ctx.fill();
 
-            // Draw Gradient Snake
+            // Particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.fillRect(p.x, p.y, 4, 4);
+            });
+            ctx.globalAlpha = 1.0;
+
+            // Snake
             let spacing = size / speed; 
             let theme = colorThemes[activeColorKey];
+            
+            // Flash if invulnerable
+            if (invulnTimer > 0 && Math.floor(Date.now() / 100) % 2 === 0) ctx.globalAlpha = 0.4;
 
-            // We draw tail first, head last, so the head and eyes overlap the body beautifully
             for (let i = snakeLength - 1; i >= 0; i--) {
                 let index = i * spacing;
                 if (index >= pathHistory.length) continue;
-                
                 let pos = pathHistory[index];
                 
-                // Calculate dynamic gradient across the length of the snake
                 let ratio = i / snakeLength;
                 let currentHue = theme.h1 + (theme.h2 - theme.h1) * ratio;
                 
                 ctx.fillStyle = `hsl(${currentHue}, ${theme.s}, ${theme.l})`;
-                ctx.beginPath();
-                ctx.arc(pos.x + size/2, pos.y + size/2, size/2, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(pos.x + size/2, pos.y + size/2, size/2, 0, Math.PI * 2); ctx.fill();
 
-                // Draw Head & Eyes (when i is 0)
+                // Head & Eyes
                 if (i === 0) {
-                    ctx.fillStyle = '#000000'; // Black dots for eyes
-                    let d = 4.5; // distance from center
-                    let ex1, ey1, ex2, ey2;
-                    
+                    ctx.fillStyle = '#000000';
+                    let d = 4.5; let ex1, ey1, ex2, ey2;
                     if (currentDir === 'RIGHT') { ex1 = d; ey1 = -d; ex2 = d; ey2 = d; }
                     else if (currentDir === 'LEFT') { ex1 = -d; ey1 = -d; ex2 = -d; ey2 = d; }
                     else if (currentDir === 'UP') { ex1 = -d; ey1 = -d; ex2 = d; ey2 = -d; }
@@ -367,8 +466,43 @@
                     ctx.beginPath(); ctx.arc(pos.x + size/2 + ex2, pos.y + size/2 + ey2, 2.5, 0, Math.PI*2); ctx.fill();
                 }
             }
+            ctx.globalAlpha = 1.0;
+
+            // Dizzy Stars
+            if (dizzyTimer > 0 && gameState !== 'DEAD') {
+                ctx.fillStyle = '#fbbf24';
+                for (let i=0; i<3; i++) {
+                    let angle = (Date.now() / 200) + (i * Math.PI * 2 / 3);
+                    let sx = snake.x + size/2 + Math.cos(angle) * 12;
+                    let sy = snake.y - 4 + Math.sin(angle) * 6;
+                    ctx.fillRect(sx, sy, 4, 4);
+                }
+            }
+
+            // UI Overlays
+            if (gameState === 'WAITING') {
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.5 + Math.sin(Date.now() / 200) * 0.5})`;
+                ctx.font = "bold 18px Arial"; ctx.textAlign = "center";
+                ctx.fillText("Press W A S D or Arrows to Start", canvas.width / 2, canvas.height / 2 + 50);
+            }
+
+            if (gameState === 'DEAD') {
+                ctx.fillStyle = `rgba(0, 0, 0, ${Math.min(0.6, deathTimer * 0.01)})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = `rgba(220, 20, 20, ${Math.min(1, deathTimer * 0.02)})`;
+                ctx.font = `900 ${Math.min(55, 30 + deathTimer * 0.3)}px "Arial Black", Impact, sans-serif`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText("WASTED", canvas.width/2, canvas.height/2);
+                
+                if (deathTimer > 150) {
+                    ctx.font = "16px Arial"; ctx.fillStyle = "white";
+                    ctx.fillText("Tap or Click to Restart", canvas.width/2, canvas.height/2 + 50);
+                }
+            }
         }
 
+        // --- ENTITY GENERATION ---
         function generateFood() {
             let valid = false;
             while(!valid) {
@@ -385,80 +519,55 @@
                 mineX = Math.floor(Math.random() * (canvas.width / size)) * size;
                 mineY = Math.floor(Math.random() * (canvas.height / size)) * size;
                 valid = true;
-                
                 if (Math.hypot(mineX - snake.x, mineY - snake.y) < size * 3) valid = false;
                 if (mineX === food.x && mineY === food.y) valid = false;
             }
             mines.push({x: mineX, y: mineY});
         }
 
-        function hasGameEnded() {
-            if (snake.x < 0 || snake.x >= canvas.width || snake.y < 0 || snake.y >= canvas.height) return true;
-            
-            for (let m of mines) {
-                if (snake.x === m.x && snake.y === m.y) return true;
-            }
-            
-            let spacing = size / speed;
-            if (snake.x % size === 0 && snake.y % size === 0) {
-                for (let i = 2; i < snakeLength; i++) {
-                    let index = i * spacing;
-                    if (index < pathHistory.length) {
-                        if (snake.x === pathHistory[index].x && snake.y === pathHistory[index].y) return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        function drawGameOver() {
-            ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "white";
-            ctx.font = "bold 30px Arial";
-            ctx.textAlign = "center";
-            ctx.fillText("Game Over!", canvas.width / 2, canvas.height / 2 - 10);
-            ctx.font = "16px Arial";
-            ctx.fillText("Tap or Click to Restart", canvas.width / 2, canvas.height / 2 + 25);
-            
-            setTimeout(() => {
-                canvas.addEventListener('click', restartGame);
-            }, 300);
+        // --- CORE RESETS ---
+        function handleRestartClick() {
+            canvas.removeEventListener('click', handleRestartClick);
+            restartGame();
         }
 
         function restartGame() {
             if (!currentUser) return;
-            canvas.removeEventListener('click', restartGame);
             cancelAnimationFrame(animationId);
             
+            gameState = 'WAITING';
             score = 0; scoreElement.innerHTML = score;
-            speed = (difficulty === 'hard') ? 4 : 2; // New adjusted speeds
+            hp = 2; updateHPDisplay();
+            
+            speed = (difficulty === 'hard') ? 4 : 2; 
             currentDir = 'RIGHT'; queuedDir = 'RIGHT';
-            snake = { x: 200, y: 200, vx: speed, vy: 0 };
-            pathHistory = [];
+            snake = { x: 200, y: 200, vx: 0, vy: 0 };
+            
+            pathHistory = [{x:200, y:200}]; 
             snakeLength = 4;
             mines = [];
-            generateFood();
+            particles = [];
             
-            isPaused = false;
+            dizzyTimer = 0; invulnTimer = 0; deathTimer = 0;
+
+            generateFood();
             requestAnimationFrame(gameLoop);
         }
 
-        // --- UI & DATA LOGIC ---
+        // --- UI MENUS ---
         let currentLeaderboardTab = 'EASY';
 
         function openModal(id) { 
-            isPaused = true; 
+            gameState = 'PAUSED'; 
             document.getElementById(id).style.display = "flex"; 
-            if(id === 'leaderboardModal') {
-                switchTab(difficulty.toUpperCase()); // Open to current mode
-            }
+            if(id === 'leaderboardModal') switchTab(difficulty.toUpperCase()); 
         }
         
         function closeModal(id) { 
             document.getElementById(id).style.display = "none"; 
-            if(currentUser && !hasGameEnded()) { 
-                isPaused = false; requestAnimationFrame(gameLoop); 
+            if(currentUser && hp > 0) { 
+                gameState = (snake.vx === 0 && snake.vy === 0) ? 'WAITING' : 'PLAYING';
+                requestAnimationFrame(gameLoop); 
             } 
         }
 
@@ -471,11 +580,9 @@
             if (snake.vy !== 0) snake.vy = (snake.vy > 0) ? speed : -speed;
             if (difficulty === 'easy') mines = [];
             
-            // Draw one frame to update color preview instantly if paused
-            if(isPaused && pathHistory.length > 0) renderGraphics(); 
+            if(gameState === 'PAUSED' && pathHistory.length > 0) renderGraphics(); 
         }
 
-        // --- LEADERBOARD TABS ---
         function switchTab(mode) {
             currentLeaderboardTab = mode;
             document.getElementById('tab-EASY').classList.toggle('active', mode === 'EASY');
@@ -485,17 +592,12 @@
 
         function saveLeaderboard(currentScore) {
             if (currentScore === 0 || !currentUser) return;
-            
             let scores = JSON.parse(localStorage.getItem('snakeLocalScores')) || [];
             let currentMode = difficulty.toUpperCase();
-            
-            // Allow separate high scores for EASY and HARD per username
             let existingPlayerIndex = scores.findIndex(entry => entry.username === currentUser && entry.mode === currentMode);
             
             if (existingPlayerIndex !== -1) {
-                if (currentScore > scores[existingPlayerIndex].score) {
-                    scores[existingPlayerIndex].score = currentScore;
-                }
+                if (currentScore > scores[existingPlayerIndex].score) scores[existingPlayerIndex].score = currentScore;
             } else {
                 scores.push({ username: currentUser, score: currentScore, mode: currentMode });
             }
@@ -507,10 +609,7 @@
         function loadLeaderboardUI() {
             const list = document.getElementById('leaderboardList');
             list.innerHTML = ""; 
-            
             let scores = JSON.parse(localStorage.getItem('snakeLocalScores')) || [];
-            
-            // Filter by the currently selected tab
             let filteredScores = scores.filter(entry => entry.mode === currentLeaderboardTab);
             let top5 = filteredScores.slice(0, 5);
             
@@ -525,12 +624,8 @@
         }
 
         // --- STARTUP LOGIC ---
-        if (currentUser) {
-            restartGame();
-        } else {
-            generateFood();
-            renderGraphics();
-        }
+        if (currentUser) restartGame();
+        else { generateFood(); updateHPDisplay(); renderGraphics(); }
     </script>
 </body>
 </html>
