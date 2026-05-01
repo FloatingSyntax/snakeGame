@@ -15,4 +15,5 @@ A modern, pure-JS take on the classic. Built on pure vibes, and it will only kee
 
 No build steps. No dependencies. 
 
-Just open `index.html` in any browser and use **WASD** or **Arrows** to move.
+## Just Click & Enjoy 👇
+https://atyseus.github.io/snakeGame/
