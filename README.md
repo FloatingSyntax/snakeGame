@@ -11,9 +11,5 @@ A modern, pure-JS take on the classic. Built on pure vibes, and it will only kee
 - **Leaderboards:** Zero-setup local high score tracking.
 - **Responsive:** Auto-enabled D-pad for mobile screens.
 
-## Play
-
-No build steps. No dependencies. 
-
 ## Just Click & Enjoy 👇
 https://atyseus.github.io/snakeGame/
