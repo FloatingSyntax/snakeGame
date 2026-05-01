@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snake Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smooth Grid Snake</title>
     <style>
         :root {
             --bg-color: #111827;
@@ -19,9 +19,10 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             min-height: 100vh; margin: 0; background-color: var(--bg-color); color: var(--text-color);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden; /* Prevent scrolling while playing on mobile */
         }
 
-        .header { display: flex; justify-content: space-between; width: 100%; max-width: 400px; margin-bottom: 10px; align-items: center; }
+        .header { display: flex; justify-content: space-between; width: 95vw; max-width: 400px; margin-bottom: 10px; align-items: center; }
         .score-board { font-size: 20px; font-weight: bold; }
         .user-info { font-size: 14px; color: #9ca3af; }
         
@@ -29,7 +30,48 @@
         button { background-color: var(--btn-bg); color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; }
         button:hover { background-color: var(--btn-hover); }
 
-        canvas { background-color: var(--canvas-bg); border: 2px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        /* Responsive Canvas */
+        canvas { 
+            background-color: var(--canvas-bg); 
+            border: 2px solid var(--border-color); 
+            border-radius: 8px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 95vw;
+            max-width: 400px;
+            height: 95vw;
+            max-height: 400px;
+            touch-action: none; /* Prevent swipe scrolling on the canvas */
+        }
+
+        /* Mobile Controls (D-Pad) */
+        .mobile-controls {
+            display: none; /* Hidden on desktop */
+            grid-template-columns: 60px 60px 60px;
+            grid-template-rows: 60px 60px 60px;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .d-btn {
+            background-color: var(--border-color);
+            border-radius: 10px;
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+            touch-action: manipulation; /* Prevent zoom on fast taps */
+        }
+        .d-btn:active { background-color: var(--btn-hover); }
+
+        #btn-up { grid-column: 2; grid-row: 1; }
+        #btn-left { grid-column: 1; grid-row: 2; }
+        #btn-right { grid-column: 3; grid-row: 2; }
+        #btn-down { grid-column: 2; grid-row: 3; }
+
+        @media (max-width: 768px) {
+            .mobile-controls { display: grid; } /* Show on mobile */
+        }
 
         /* Modals */
         .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 100; }
@@ -47,7 +89,6 @@
         .rank-user { display: flex; gap: 10px; }
         .score-mode { text-align: right; }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -58,11 +99,18 @@
         </div>
         <div class="controls">
             <button onclick="openModal('settingsModal')">⚙️</button>
-            <button onclick="openModal('leaderboardModal')">🏆 Leaderboard</button>
+            <button onclick="openModal('leaderboardModal')">🏆</button>
         </div>
     </div>
     
     <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+    <div class="mobile-controls">
+        <div class="d-btn" id="btn-up">⬆️</div>
+        <div class="d-btn" id="btn-left">⬅️</div>
+        <div class="d-btn" id="btn-right">➡️</div>
+        <div class="d-btn" id="btn-down">⬇️</div>
+    </div>
 
     <div id="nameModal" class="modal">
         <div class="modal-content">
@@ -93,19 +141,13 @@
 
     <div id="leaderboardModal" class="modal">
         <div class="modal-content">
-            <h2>Top 5 Global Scores</h2>
+            <h2>Top 5 High Scores</h2>
             <ul id="leaderboardList" class="leaderboard-list"></ul>
             <button style="width: 100%;" onclick="closeModal('leaderboardModal')">Close</button>
         </div>
     </div>
 
     <script>
-        // --- SUPABASE CONFIGURATION ---
-        // ⚠️ PASTE YOUR KEYS HERE AGAIN! ⚠️
-        const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL'; 
-        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
         // --- NAME SYSTEM ---
         let currentUser = localStorage.getItem('snakePlayerName');
         
@@ -134,18 +176,18 @@
             isPaused = true;
         }
 
-        // --- GAME ENGINE (Smooth Movement, Strict Grid Rules) ---
+        // --- GAME ENGINE ---
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const scoreElement = document.getElementById("score");
 
-        const size = 20; // Grid block size
+        const size = 20; 
         let isPaused = true;
         let animationId;
         
         let score = 0;
         let difficulty = "easy";
-        let speed = 4; // MUST divide smoothly into size (20). Easy = 4px/frame, Hard = 5px/frame
+        let speed = 4; 
         
         let currentDir = 'RIGHT';
         let queuedDir = 'RIGHT';
@@ -157,8 +199,38 @@
         let food = {x: 0, y: 0};
         let mines = [];
 
-        document.addEventListener("keydown", queueDirection);
-        if (currentUser) requestAnimationFrame(gameLoop); // Auto-start rendering if logged in
+        // --- CONTROLS LOGIC ---
+        function setDirection(newDir) {
+            if (!currentUser) return;
+            if (newDir === 'LEFT' && currentDir !== 'RIGHT') queuedDir = 'LEFT';
+            if (newDir === 'UP' && currentDir !== 'DOWN') queuedDir = 'UP';
+            if (newDir === 'RIGHT' && currentDir !== 'LEFT') queuedDir = 'RIGHT';
+            if (newDir === 'DOWN' && currentDir !== 'UP') queuedDir = 'DOWN';
+        }
+
+        // Keyboard Event Listener
+        document.addEventListener("keydown", (e) => {
+            const key = e.keyCode;
+            if (key === 37 || key === 65) setDirection('LEFT');
+            if (key === 38 || key === 87) setDirection('UP');
+            if (key === 39 || key === 68) setDirection('RIGHT');
+            if (key === 40 || key === 83) setDirection('DOWN');
+        });
+
+        // Mobile Button Event Listeners
+        const setupMobileBtn = (id, dir) => {
+            const btn = document.getElementById(id);
+            // Handle both touch and mouse clicks on the D-Pad smoothly
+            const handler = (e) => { e.preventDefault(); setDirection(dir); };
+            btn.addEventListener('touchstart', handler, {passive: false});
+            btn.addEventListener('mousedown', handler);
+        };
+        setupMobileBtn('btn-up', 'UP');
+        setupMobileBtn('btn-left', 'LEFT');
+        setupMobileBtn('btn-right', 'RIGHT');
+        setupMobileBtn('btn-down', 'DOWN');
+
+        if (currentUser) requestAnimationFrame(gameLoop);
 
         function gameLoop() {
             if (isPaused || !currentUser) return;
@@ -176,7 +248,6 @@
         }
 
         function updatePhysics() {
-            // SNAP TO GRID RULE: Only allow turns when snake is perfectly aligned to a 20x20 block
             if (snake.x % size === 0 && snake.y % size === 0) {
                 currentDir = queuedDir;
                 
@@ -186,21 +257,17 @@
                 else if (currentDir === 'DOWN') { snake.vx = 0; snake.vy = speed; }
             }
 
-            // Move Head smoothly pixel-by-pixel
             snake.x += snake.vx;
             snake.y += snake.vy;
 
-            // Save history for body to follow
             pathHistory.unshift({x: snake.x, y: snake.y});
             
-            // Because speed varies, we calculate how many array items equal 1 grid block
             let spacing = size / speed; 
             
             if (pathHistory.length > snakeLength * spacing + 1) {
                 pathHistory.pop();
             }
 
-            // Grid-aligned Food Collision
             if (snake.x === food.x && snake.y === food.y) {
                 score += 10;
                 scoreElement.innerHTML = score;
@@ -214,7 +281,6 @@
             ctx.fillStyle = '#1f2937';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Mines
             mines.forEach(mine => {
                 ctx.shadowBlur = 15;
                 ctx.shadowColor = '#ff0044';
@@ -231,13 +297,11 @@
             });
             ctx.shadowBlur = 0; 
 
-            // Draw Food
             ctx.fillStyle = '#10b981';
             ctx.beginPath();
             ctx.arc(food.x + size/2, food.y + size/2, size/2.2, 0, Math.PI * 2);
             ctx.fill();
 
-            // Draw Snake
             let spacing = size / speed; 
             for (let i = 0; i < snakeLength; i++) {
                 let index = i * spacing;
@@ -248,163 +312,4 @@
                 
                 ctx.fillStyle = `hsl(210, 80%, ${lightness}%)`;
                 ctx.beginPath();
-                ctx.arc(pos.x + size/2, pos.y + size/2, size/2, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-
-        // --- GAME LOGIC ---
-
-        function generateFood() {
-            let valid = false;
-            while(!valid) {
-                // Snap to 20x20 grid
-                food.x = Math.floor(Math.random() * (canvas.width / size)) * size;
-                food.y = Math.floor(Math.random() * (canvas.height / size)) * size;
-                valid = true;
-                mines.forEach(m => { if(m.x === food.x && m.y === food.y) valid = false; });
-            }
-        }
-
-        function generateMine() {
-            let mineX, mineY, valid = false;
-            while(!valid) {
-                mineX = Math.floor(Math.random() * (canvas.width / size)) * size;
-                mineY = Math.floor(Math.random() * (canvas.height / size)) * size;
-                valid = true;
-                
-                // Don't spawn on snake head
-                if (Math.hypot(mineX - snake.x, mineY - snake.y) < size * 3) valid = false;
-                if (mineX === food.x && mineY === food.y) valid = false;
-            }
-            mines.push({x: mineX, y: mineY});
-        }
-
-        function queueDirection(event) {
-            if (!currentUser) return;
-            const key = event.keyCode;
-            
-            // Queue the turn, but prevent 180-degree suicide turns based on current physical direction
-            if ((key === 37 || key === 65) && currentDir !== 'RIGHT') queuedDir = 'LEFT';
-            if ((key === 38 || key === 87) && currentDir !== 'DOWN') queuedDir = 'UP';
-            if ((key === 39 || key === 68) && currentDir !== 'LEFT') queuedDir = 'RIGHT';
-            if ((key === 40 || key === 83) && currentDir !== 'UP') queuedDir = 'DOWN';
-        }
-
-        function hasGameEnded() {
-            // Wall Collision
-            if (snake.x < 0 || snake.x >= canvas.width || snake.y < 0 || snake.y >= canvas.height) return true;
-            
-            // Mine Collision
-            for (let m of mines) {
-                if (snake.x === m.x && snake.y === m.y) return true;
-            }
-            
-            // Self Collision (Only check against grid-aligned body segments)
-            let spacing = size / speed;
-            if (snake.x % size === 0 && snake.y % size === 0) {
-                for (let i = 2; i < snakeLength; i++) {
-                    let index = i * spacing;
-                    if (index < pathHistory.length) {
-                        if (snake.x === pathHistory[index].x && snake.y === pathHistory[index].y) return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        function drawGameOver() {
-            ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "white";
-            ctx.font = "bold 30px Arial";
-            ctx.textAlign = "center";
-            ctx.fillText("Game Over!", canvas.width / 2, canvas.height / 2 - 10);
-            ctx.font = "16px Arial";
-            ctx.fillText("Click to Restart", canvas.width / 2, canvas.height / 2 + 25);
-            canvas.addEventListener('click', restartGame);
-        }
-
-        function restartGame(e) {
-            if (!currentUser) return;
-            canvas.removeEventListener('click', restartGame);
-            cancelAnimationFrame(animationId);
-            
-            score = 0; scoreElement.innerHTML = score;
-            speed = (difficulty === 'hard') ? 5 : 4;
-            currentDir = 'RIGHT'; queuedDir = 'RIGHT';
-            snake = { x: 200, y: 200, vx: speed, vy: 0 };
-            pathHistory = [];
-            snakeLength = 4;
-            mines = [];
-            generateFood();
-            
-            isPaused = false;
-            requestAnimationFrame(gameLoop);
-        }
-
-        // --- UI & DATA LOGIC ---
-        function openModal(id) { isPaused = true; document.getElementById(id).style.display = "flex"; if(id === 'leaderboardModal') loadLeaderboardUI(); }
-        function closeModal(id) { document.getElementById(id).style.display = "none"; if(currentUser && !hasGameEnded()) { isPaused = false; requestAnimationFrame(gameLoop); } }
-
-        function updateSettings() {
-            difficulty = document.getElementById('difficultySelect').value;
-            speed = (difficulty === 'hard') ? 5 : 4;
-            if (snake.vx !== 0) snake.vx = (snake.vx > 0) ? speed : -speed;
-            if (snake.vy !== 0) snake.vy = (snake.vy > 0) ? speed : -speed;
-            if (difficulty === 'easy') mines = [];
-        }
-
-        // --- SUPABASE LEADERBOARD (HIGHEST SCORE ONLY) ---
-        async function saveLeaderboard(currentScore) {
-            if (currentScore === 0 || !currentUser) return;
-            
-            // 1. Check if user already exists in the database
-            const { data: existingData, error: fetchError } = await supabase
-                .from('global_leaderboard')
-                .select('*')
-                .eq('username', currentUser);
-
-            if (fetchError) { console.error("Fetch Error:", fetchError); return; }
-
-            if (existingData && existingData.length > 0) {
-                // 2. If user exists, ONLY update if the new score is higher
-                if (currentScore > existingData[0].score) {
-                    await supabase
-                        .from('global_leaderboard')
-                        .update({ score: currentScore, mode: difficulty.toUpperCase() })
-                        .eq('username', currentUser);
-                }
-            } else {
-                // 3. New user, insert their first score
-                await supabase
-                    .from('global_leaderboard')
-                    .insert([{ username: currentUser, score: currentScore, mode: difficulty.toUpperCase() }]);
-            }
-        }
-
-        async function loadLeaderboardUI() {
-            const list = document.getElementById('leaderboardList');
-            list.innerHTML = "<li>Loading...</li>"; 
-            
-            const { data: scores, error } = await supabase
-                .from('global_leaderboard')
-                .select('*')
-                .order('score', { ascending: false }) 
-                .limit(5); 
-
-            if (error) return list.innerHTML = "<li>Failed to load leaderboard.</li>";
-
-            list.innerHTML = "";
-            if(scores.length === 0) return list.innerHTML = "<li>No scores yet!</li>";
-
-            scores.forEach((entry, index) => {
-                const li = document.createElement('li');
-                li.innerHTML = `<div class="rank-user"><strong>#${index + 1}</strong> <span>${entry.username}</span></div>
-                                <div class="score-mode"><strong>${entry.score} pts</strong> <br><span style="font-size: 10px; color:#9ca3af;">${entry.mode}</span></div>`;
-                list.appendChild(li);
-            });
-        }
-    </script>
-</body>
-</html>
+                ctx.arc(pos.x + size/2, pos
