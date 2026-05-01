@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smooth Grid Snake</title>
+    <title>Snake Game</title>
     <style>
         :root {
             --bg-color: #111827;
@@ -312,4 +312,130 @@
                 
                 ctx.fillStyle = `hsl(210, 80%, ${lightness}%)`;
                 ctx.beginPath();
-                ctx.arc(pos.x + size/2, pos
+                ctx.arc(pos.x + size/2, pos.y + size/2, size/2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function generateFood() {
+            let valid = false;
+            while(!valid) {
+                food.x = Math.floor(Math.random() * (canvas.width / size)) * size;
+                food.y = Math.floor(Math.random() * (canvas.height / size)) * size;
+                valid = true;
+                mines.forEach(m => { if(m.x === food.x && m.y === food.y) valid = false; });
+            }
+        }
+
+        function generateMine() {
+            let mineX, mineY, valid = false;
+            while(!valid) {
+                mineX = Math.floor(Math.random() * (canvas.width / size)) * size;
+                mineY = Math.floor(Math.random() * (canvas.height / size)) * size;
+                valid = true;
+                
+                if (Math.hypot(mineX - snake.x, mineY - snake.y) < size * 3) valid = false;
+                if (mineX === food.x && mineY === food.y) valid = false;
+            }
+            mines.push({x: mineX, y: mineY});
+        }
+
+        function hasGameEnded() {
+            if (snake.x < 0 || snake.x >= canvas.width || snake.y < 0 || snake.y >= canvas.height) return true;
+            
+            for (let m of mines) {
+                if (snake.x === m.x && snake.y === m.y) return true;
+            }
+            
+            let spacing = size / speed;
+            if (snake.x % size === 0 && snake.y % size === 0) {
+                for (let i = 2; i < snakeLength; i++) {
+                    let index = i * spacing;
+                    if (index < pathHistory.length) {
+                        if (snake.x === pathHistory[index].x && snake.y === pathHistory[index].y) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function drawGameOver() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "white";
+            ctx.font = "bold 30px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("Game Over!", canvas.width / 2, canvas.height / 2 - 10);
+            ctx.font = "16px Arial";
+            ctx.fillText("Tap or Click to Restart", canvas.width / 2, canvas.height / 2 + 25);
+            canvas.addEventListener('click', restartGame);
+        }
+
+        function restartGame(e) {
+            if (!currentUser) return;
+            canvas.removeEventListener('click', restartGame);
+            cancelAnimationFrame(animationId);
+            
+            score = 0; scoreElement.innerHTML = score;
+            speed = (difficulty === 'hard') ? 5 : 4;
+            currentDir = 'RIGHT'; queuedDir = 'RIGHT';
+            snake = { x: 200, y: 200, vx: speed, vy: 0 };
+            pathHistory = [];
+            snakeLength = 4;
+            mines = [];
+            generateFood();
+            
+            isPaused = false;
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- UI & DATA LOGIC ---
+        function openModal(id) { isPaused = true; document.getElementById(id).style.display = "flex"; if(id === 'leaderboardModal') loadLeaderboardUI(); }
+        function closeModal(id) { document.getElementById(id).style.display = "none"; if(currentUser && !hasGameEnded()) { isPaused = false; requestAnimationFrame(gameLoop); } }
+
+        function updateSettings() {
+            difficulty = document.getElementById('difficultySelect').value;
+            speed = (difficulty === 'hard') ? 5 : 4;
+            if (snake.vx !== 0) snake.vx = (snake.vx > 0) ? speed : -speed;
+            if (snake.vy !== 0) snake.vy = (snake.vy > 0) ? speed : -speed;
+            if (difficulty === 'easy') mines = [];
+        }
+
+        function saveLeaderboard(currentScore) {
+            if (currentScore === 0 || !currentUser) return;
+            
+            let scores = JSON.parse(localStorage.getItem('snakeLocalScores')) || [];
+            let existingPlayerIndex = scores.findIndex(entry => entry.username === currentUser);
+            
+            if (existingPlayerIndex !== -1) {
+                if (currentScore > scores[existingPlayerIndex].score) {
+                    scores[existingPlayerIndex].score = currentScore;
+                    scores[existingPlayerIndex].mode = difficulty.toUpperCase();
+                }
+            } else {
+                scores.push({ username: currentUser, score: currentScore, mode: difficulty.toUpperCase() });
+            }
+            
+            scores.sort((a, b) => b.score - a.score);
+            localStorage.setItem('snakeLocalScores', JSON.stringify(scores));
+        }
+
+        function loadLeaderboardUI() {
+            const list = document.getElementById('leaderboardList');
+            list.innerHTML = ""; 
+            
+            let scores = JSON.parse(localStorage.getItem('snakeLocalScores')) || [];
+            let top5 = scores.slice(0, 5);
+            
+            if(top5.length === 0) return list.innerHTML = "<li>No scores yet!</li>";
+
+            top5.forEach((entry, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<div class="rank-user"><strong>#${index + 1}</strong> <span>${entry.username}</span></div>
+                                <div class="score-mode"><strong>${entry.score} pts</strong> <br><span style="font-size: 10px; color:#9ca3af;">${entry.mode}</span></div>`;
+                list.appendChild(li);
+            });
+        }
+    </script>
+</body>
+</html>
