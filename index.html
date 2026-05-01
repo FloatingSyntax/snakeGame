@@ -3,647 +3,380 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Snake Game</title>
+    <title>Snake Game</title>
     <style>
-        /* CSS Variables for Theming */
         :root {
-            --bg-color: #2c3e50;
-            --canvas-bg: #34495e;
-            --text-color: #ecf0f1;
-            --border-color: #bdc3c7;
-            --modal-bg: rgba(44, 62, 80, 0.95);
-            --btn-bg: #3498db;
-            --btn-hover: #2980b9;
-        }
-
-        /* Midnight Theme (Dark 2) */
-        body.theme-midnight {
-            --bg-color: #0f172a;
-            --canvas-bg: #1e293b;
-            --text-color: #f8fafc;
-            --border-color: #475569;
-            --modal-bg: rgba(15, 23, 42, 0.95);
-            --btn-bg: #6366f1;
-            --btn-hover: #4f46e5;
-        }
-
-        /* Minimal Light Theme */
-        body.theme-light {
-            --bg-color: #f3f4f6;
-            --canvas-bg: #ffffff;
-            --text-color: #1f2937;
-            --border-color: #d1d5db;
-            --modal-bg: rgba(255, 255, 255, 0.95);
-            --btn-bg: #10b981;
-            --btn-hover: #059669;
-        }
-
-        /* Sunny Light Theme */
-        body.theme-sunny {
-            --bg-color: #fef3c7;
-            --canvas-bg: #fffbeb;
-            --text-color: #92400e;
-            --border-color: #fcd34d;
-            --modal-bg: rgba(254, 243, 199, 0.95);
-            --btn-bg: #f59e0b;
-            --btn-hover: #d97706;
-        }
-
-        * {
-            box-sizing: border-box;
-            transition: background-color 0.3s, color 0.3s;
+            --bg-color: #111827;
+            --canvas-bg: #1f2937;
+            --text-color: #f3f4f6;
+            --border-color: #374151;
+            --modal-bg: rgba(17, 24, 39, 0.95);
+            --btn-bg: #3b82f6;
+            --btn-hover: #2563eb;
         }
 
         body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; margin: 0; background-color: var(--bg-color); color: var(--text-color);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            max-width: 400px;
-            margin-bottom: 15px;
-            align-items: center;
-        }
-
-        .score-board {
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .controls {
-            display: flex;
-            gap: 10px;
-        }
-
-        button {
-            background-color: var(--btn-bg);
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
-        }
-
-        button:hover {
-            background-color: var(--btn-hover);
-        }
-
-        canvas {
-            background-color: var(--canvas-bg);
-            border: 4px solid var(--border-color);
-            border-radius: 8px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-            max-width: 100%;
-        }
-
-        .instructions {
-            margin-top: 15px;
-            opacity: 0.8;
-            font-size: 14px;
-            text-align: center;
-        }
-
-        /* Modal Styles */
-        .modal {
-            display: none; 
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-        }
-
-        .modal-content {
-            background-color: var(--modal-bg);
-            padding: 30px;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 400px;
-            border: 2px solid var(--border-color);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.5);
-        }
-
-        .modal h2 {
-            margin-top: 0;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px;
-        }
-
-        .setting-group {
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        select {
-            padding: 5px;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-            cursor: pointer;
-            background: var(--canvas-bg);
-            color: var(--text-color);
-        }
-
-        /* Color Palette Grid */
-        .color-palette {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .swatch {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: transform 0.2s;
-        }
-
-        .swatch:hover {
-            transform: scale(1.2);
-        }
+        .header { display: flex; justify-content: space-between; width: 100%; max-width: 400px; margin-bottom: 10px; align-items: center; }
+        .score-board { font-size: 20px; font-weight: bold; }
+        .user-info { font-size: 14px; color: #9ca3af; }
         
-        .swatch.selected {
-            border: 2px solid white;
-            box-shadow: 0 0 8px rgba(255,255,255,0.8);
-        }
+        .controls { display: flex; gap: 8px; }
+        button { background-color: var(--btn-bg); color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: var(--btn-hover); }
 
-        .close-btn {
-            width: 100%;
-            margin-top: 15px;
-            padding: 10px;
-            font-size: 16px;
-        }
+        canvas { background-color: var(--canvas-bg); border: 2px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
 
-        .highscore-list {
-            list-style: none;
-            padding: 0;
-            margin: 0 0 20px 0;
-        }
+        /* Modals */
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background-color: var(--modal-bg); padding: 30px; border-radius: 10px; width: 90%; max-width: 350px; border: 1px solid var(--border-color); }
+        .modal h2 { margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+        
+        .input-group { margin-bottom: 15px; display: flex; flex-direction: column; }
+        .input-group label { font-size: 12px; margin-bottom: 5px; color: #9ca3af;}
+        .input-group input, select { padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--canvas-bg); color: white; }
+        
+        .auth-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .auth-buttons button { flex: 1; }
+        .error-msg { color: #ef4444; font-size: 12px; margin-top: 5px; min-height: 15px; }
 
-        .highscore-list li {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .mobile-controls {
-            display: none;
-            grid-template-columns: 50px 50px 50px;
-            grid-gap: 10px;
-            margin-top: 20px;
-        }
-
-        .mobile-controls button {
-            width: 50px;
-            height: 50px;
-            font-size: 20px;
-        }
-
-        @media (max-width: 600px) {
-            .mobile-controls { display: grid; }
-            .instructions { display: none; }
-        }
+        .leaderboard-list { list-style: none; padding: 0; margin: 0 0 20px 0; font-size: 14px;}
+        .leaderboard-list li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color); }
+        .rank-user { display: flex; gap: 10px; }
+        .score-mode { text-align: right; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div class="score-board">Score: <span id="score">0</span></div>
+        <div>
+            <div class="user-info" id="displayUsername">Not logged in</div>
+            <div class="score-board">Score: <span id="score">0</span></div>
+        </div>
         <div class="controls">
-            <button onclick="openModal('settingsModal')">⚙️ Settings</button>
-            <button onclick="openModal('highscoresModal')">🏆 Scores</button>
+            <button onclick="openModal('settingsModal')">⚙️</button>
+            <button onclick="openModal('leaderboardModal')">🏆 Leaderboard</button>
         </div>
     </div>
     
     <canvas id="gameCanvas" width="400" height="400"></canvas>
-    
-    <div class="instructions">Use <strong>Arrow Keys</strong> or <strong>W A S D</strong> to move</div>
 
-    <div class="mobile-controls">
-        <div></div>
-        <button onclick="triggerKey(38)">▲</button>
-        <div></div>
-        <button onclick="triggerKey(37)">◀</button>
-        <button onclick="triggerKey(40)">▼</button>
-        <button onclick="triggerKey(39)">▶</button>
+    <div id="authModal" class="modal" style="display: flex;">
+        <div class="modal-content">
+            <h2>Player Login</h2>
+            <p style="font-size: 12px; color: #9ca3af;">Create a username and password to track your score.</p>
+            <div class="input-group">
+                <label>Username (Case Sensitive)</label>
+                <input type="text" id="usernameInput" placeholder="Enter username">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="passwordInput" placeholder="Enter password">
+            </div>
+            <div id="authError" class="error-msg"></div>
+            <div class="auth-buttons">
+                <button onclick="login()">Login</button>
+                <button onclick="register()" style="background-color: #10b981;">Register</button>
+            </div>
+        </div>
     </div>
 
     <div id="settingsModal" class="modal">
         <div class="modal-content">
-            <h2>Customization</h2>
-            
-            <div class="setting-group">
+            <h2>Settings</h2>
+            <div class="input-group">
                 <label>Difficulty</label>
                 <select id="difficultySelect" onchange="updateSettings()">
                     <option value="easy">Easy (Slower, No Mines)</option>
-                    <option value="hard">Hard (Fast, Mines!)</option>
+                    <option value="hard">Hard (Fast, Neon Mines!)</option>
                 </select>
             </div>
-
-            <div class="setting-group">
-                <label>Theme</label>
-                <select id="themeSelect" onchange="updateSettings()">
-                    <option value="theme-default">Classic Dark</option>
-                    <option value="theme-midnight">Midnight (Dark)</option>
-                    <option value="theme-light">Minimal (Light)</option>
-                    <option value="theme-sunny">Sunny (Light)</option>
-                </select>
-            </div>
-
-            <div>
-                <label>Snake Gradient Color</label>
-                <div class="color-palette" id="paletteContainer">
-                    </div>
-            </div>
-
-            <button class="close-btn" onclick="closeModal('settingsModal')">Done</button>
+            <button style="width: 100%; margin-top: 10px;" onclick="closeModal('settingsModal')">Done</button>
+            <button style="width: 100%; margin-top: 10px; background-color: #ef4444;" onclick="logout()">Logout</button>
         </div>
     </div>
 
-    <div id="highscoresModal" class="modal">
+    <div id="leaderboardModal" class="modal">
         <div class="modal-content">
-            <h2>Top 5 Highscores</h2>
-            <ul id="highscoreList" class="highscore-list"></ul>
-            <button class="close-btn" onclick="closeModal('highscoresModal')">Close</button>
+            <h2>Top 5 Leaderboard</h2>
+            <ul id="leaderboardList" class="leaderboard-list"></ul>
+            <button style="width: 100%;" onclick="closeModal('leaderboardModal')">Close</button>
         </div>
     </div>
 
     <script>
+        // --- MOCK AUTHENTICATION SYSTEM (FRONTEND ONLY) ---
+        let currentUser = null;
+
+        function getDB() {
+            return JSON.parse(localStorage.getItem('snakeUsersDB')) || {};
+        }
+        function saveDB(db) {
+            localStorage.setItem('snakeUsersDB', JSON.stringify(db));
+        }
+
+        function register() {
+            const user = document.getElementById('usernameInput').value.trim();
+            const pass = document.getElementById('passwordInput').value.trim();
+            const errorDiv = document.getElementById('authError');
+            
+            if (!user || !pass) return errorDiv.innerText = "Fields cannot be empty!";
+            
+            let db = getDB();
+            if (db[user]) return errorDiv.innerText = "Username already exists!";
+            
+            db[user] = pass; // Storing plain text! (Insecure in real life)
+            saveDB(db);
+            
+            loginSuccess(user);
+        }
+
+        function login() {
+            const user = document.getElementById('usernameInput').value.trim();
+            const pass = document.getElementById('passwordInput').value.trim();
+            const errorDiv = document.getElementById('authError');
+            
+            let db = getDB();
+            if (!db[user]) return errorDiv.innerText = "Username not found!";
+            if (db[user] !== pass) return errorDiv.innerText = "Incorrect password!";
+            
+            loginSuccess(user);
+        }
+
+        function loginSuccess(user) {
+            currentUser = user;
+            document.getElementById('displayUsername').innerText = `Player: ${user}`;
+            document.getElementById('authModal').style.display = 'none';
+            document.getElementById('usernameInput').value = '';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('authError').innerText = '';
+            restartGame({type: 'click'}); // Start game
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('displayUsername').innerText = "Not logged in";
+            closeModal('settingsModal');
+            document.getElementById('authModal').style.display = 'flex';
+            isPaused = true;
+        }
+
+        // --- SMOOTH GAME ENGINE ---
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const scoreElement = document.getElementById("score");
 
-        // Game Configuration
-        const gridSize = 20;
-        let isPaused = false;
+        const size = 15; // Width/Height of snake and food
+        let isPaused = true;
         let animationId;
-        let lastTime = 0;
-        let logicTimer = 0;
         
-        // State
         let score = 0;
         let difficulty = "easy";
-        let speed = 150; 
-        let changingDirection = false;
-        let dx = gridSize;
-        let dy = 0;
-        let snake = [{x: 200, y: 200}, {x: 180, y: 200}, {x: 160, y: 200}];
-        let foodX, foodY;
-        let mines = [];
-
-        // 10 HSL Hues for Gradient Colors
-        const hues = [0, 30, 50, 120, 160, 190, 220, 270, 300, 330];
-        let currentHue = 120; // Default Green
-
-        // Initialization
-        setupPalette();
-        loadSettings();
-        generateFood();
-        document.addEventListener("keydown", changeDirection);
+        let baseSpeed = 2.5; // Pixels per frame
         
-        // Start high-FPS Game Loop
-        requestAnimationFrame(gameLoop);
+        let snake = { x: 200, y: 200, vx: baseSpeed, vy: 0 };
+        let pathHistory = []; 
+        let snakeLength = 15; // How many history nodes to trail
+        let spacing = 6; // Spacing between drawn segments
 
-        // --- GAME ENGINE (High FPS Render Loop) ---
+        let food = {x: 0, y: 0};
+        let mines = [];
+        let changingDirection = false;
 
-        function gameLoop(timestamp) {
+        document.addEventListener("keydown", changeDirection);
+
+        function gameLoop() {
+            if (isPaused || !currentUser) return;
+
+            updatePhysics();
+            
             if (hasGameEnded()) {
-                saveHighScore(score);
+                saveLeaderboard(score);
                 drawGameOver();
                 return;
             }
 
-            if (isPaused) {
-                lastTime = timestamp; // Prevent logic jump when unpausing
-                animationId = requestAnimationFrame(gameLoop);
-                return;
-            }
-
-            // Calculate time passed since last frame
-            const deltaTime = timestamp - lastTime;
-            lastTime = timestamp;
-            logicTimer += deltaTime;
-
-            // Update logic only when enough time has passed (controls speed)
-            if (logicTimer >= speed) {
-                advanceSnake();
-                changingDirection = false;
-                logicTimer = 0; // Reset timer
-            }
-
-            // Render visuals at max monitor refresh rate
-            clearCanvas();
-            drawMines();
-            drawFood();
-            drawSnake();
-
+            renderGraphics();
             animationId = requestAnimationFrame(gameLoop);
         }
 
-        // --- DRAWING ---
+        function updatePhysics() {
+            // Move Head smoothly
+            snake.x += snake.vx;
+            snake.y += snake.vy;
 
-        function clearCanvas() {
-            const computedStyle = getComputedStyle(document.body);
-            ctx.fillStyle = computedStyle.getPropertyValue('--canvas-bg').trim();
+            // Save history for body to follow
+            pathHistory.unshift({x: snake.x, y: snake.y});
+            
+            // Remove old history
+            if (pathHistory.length > snakeLength * spacing + 1) {
+                pathHistory.pop();
+            }
+
+            // Check Food Collision (Distance based instead of grid)
+            const distToFood = Math.hypot(snake.x - food.x, snake.y - food.y);
+            if (distToFood < size) {
+                score += 10;
+                scoreElement.innerHTML = score;
+                snakeLength += 2; // Grow
+                generateFood();
+                if (difficulty === 'hard') generateMine();
+            }
+
+            changingDirection = false;
+        }
+
+        function renderGraphics() {
+            // Clear canvas
+            ctx.fillStyle = '#1f2937';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
 
-        function drawSnake() {
-            const computedStyle = getComputedStyle(document.body);
-            ctx.strokeStyle = computedStyle.getPropertyValue('--bg-color').trim();
-
-            snake.forEach((part, index) => {
-                // Calculate lightness for gradient effect (darkens as it reaches tail)
-                let lightness = Math.max(25, 65 - (index * 2));
-                
-                ctx.fillStyle = `hsl(${currentHue}, 80%, ${lightness}%)`;
-                ctx.fillRect(part.x, part.y, gridSize, gridSize);
-                ctx.strokeRect(part.x, part.y, gridSize, gridSize);
-
-                if (index === 0) drawEyes(part.x, part.y);
-            });
-        }
-
-        function drawEyes(headX, headY) {
-            ctx.fillStyle = 'white';
-            let eyeRadius = 3, pupilRadius = 1.5;
-            let eye1X, eye1Y, eye2X, eye2Y;
-
-            if (dx > 0) { eye1X = headX + gridSize - eyeRadius * 1.5; eye1Y = headY + 5; eye2X = headX + gridSize - eyeRadius * 1.5; eye2Y = headY + 15; } 
-            else if (dx < 0) { eye1X = headX + eyeRadius * 1.5; eye1Y = headY + 5; eye2X = headX + eyeRadius * 1.5; eye2Y = headY + 15; } 
-            else if (dy < 0) { eye1X = headX + 5; eye1Y = headY + eyeRadius * 1.5; eye2X = headX + 15; eye2Y = headY + eyeRadius * 1.5; } 
-            else if (dy > 0) { eye1X = headX + 5; eye1Y = headY + gridSize - eyeRadius * 1.5; eye2X = headX + 15; eye2Y = headY + gridSize - eyeRadius * 1.5; } 
-            else { eye1X = headX + gridSize - eyeRadius * 1.5; eye1Y = headY + 5; eye2X = headX + gridSize - eyeRadius * 1.5; eye2Y = headY + 15; } 
-
-            ctx.beginPath(); ctx.arc(eye1X, eye1Y, eyeRadius, 0, Math.PI * 2, true); ctx.fill();
-            ctx.beginPath(); ctx.arc(eye2X, eye2Y, eyeRadius, 0, Math.PI * 2, true); ctx.fill();
-
-            ctx.fillStyle = 'black';
-            ctx.beginPath(); ctx.arc(eye1X, eye1Y, pupilRadius, 0, Math.PI * 2, true); ctx.fill();
-            ctx.beginPath(); ctx.arc(eye2X, eye2Y, pupilRadius, 0, Math.PI * 2, true); ctx.fill();
-        }
-
-        function drawFood() {
-            ctx.fillStyle = '#e74c3c';
-            ctx.strokeStyle = '#c0392b';
-            ctx.fillRect(foodX, foodY, gridSize, gridSize);
-            ctx.strokeRect(foodX, foodY, gridSize, gridSize);
-        }
-
-        function drawMines() {
+            // Draw Mines (Neon Black/Red)
             mines.forEach(mine => {
-                ctx.fillStyle = '#34495e'; // Dark outer shell
-                ctx.strokeStyle = '#2c3e50';
-                
-                // Draw a circle instead of square for mines
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#ff0044';
+                ctx.fillStyle = '#000000';
                 ctx.beginPath();
-                ctx.arc(mine.x + gridSize/2, mine.y + gridSize/2, gridSize/2.2, 0, Math.PI * 2);
+                ctx.arc(mine.x, mine.y, size/1.5, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.stroke();
                 
-                // Draw flashing red core
-                ctx.fillStyle = (Date.now() % 1000 < 500) ? '#e74c3c' : '#c0392b'; 
+                // Red glowing core
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = (Date.now() % 800 < 400) ? '#ff0044' : '#4a0011';
                 ctx.beginPath();
-                ctx.arc(mine.x + gridSize/2, mine.y + gridSize/2, gridSize/4, 0, Math.PI * 2);
+                ctx.arc(mine.x, mine.y, size/3, 0, Math.PI * 2);
                 ctx.fill();
             });
+            ctx.shadowBlur = 0; // Reset shadow
+
+            // Draw Food
+            ctx.fillStyle = '#10b981';
+            ctx.beginPath();
+            ctx.arc(food.x, food.y, size/1.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw Snake (Smooth following)
+            for (let i = 0; i < snakeLength; i++) {
+                let index = i * spacing;
+                if (index >= pathHistory.length) break;
+                
+                let pos = pathHistory[index];
+                let lightness = Math.max(30, 60 - (i * 1.5));
+                
+                ctx.fillStyle = `hsl(210, 80%, ${lightness}%)`;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, size/1.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         // --- GAME LOGIC ---
 
-        function advanceSnake() {
-            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
-            snake.unshift(head);
-
-            if (snake[0].x === foodX && snake[0].y === foodY) {
-                score += 10;
-                scoreElement.innerHTML = score;
-                generateFood();
-                
-                // Spawn a mine in Hard mode every time food is eaten
-                if (difficulty === 'hard') {
-                    generateMine();
-                }
-            } else {
-                snake.pop();
-            }
-        }
-
-        function randomGridCoord(min, max) {
-            return Math.round((Math.random() * (max - min) + min) / gridSize) * gridSize;
-        }
-
         function generateFood() {
-            let valid = false;
-            while (!valid) {
-                foodX = randomGridCoord(0, canvas.width - gridSize);
-                foodY = randomGridCoord(0, canvas.height - gridSize);
-                valid = true;
-                
-                // Make sure food doesn't spawn on snake or mines
-                snake.forEach(part => { if (part.x === foodX && part.y === foodY) valid = false; });
-                mines.forEach(mine => { if (mine.x === foodX && mine.y === foodY) valid = false; });
-            }
+            food.x = Math.random() * (canvas.width - size*2) + size;
+            food.y = Math.random() * (canvas.height - size*2) + size;
         }
 
         function generateMine() {
-            let valid = false;
-            let mineX, mineY;
-            while (!valid) {
-                mineX = randomGridCoord(0, canvas.width - gridSize);
-                mineY = randomGridCoord(0, canvas.height - gridSize);
-                valid = true;
-                
-                // Avoid snake
-                snake.forEach(part => { if (part.x === mineX && part.y === mineY) valid = false; });
-                // Avoid food
-                if (foodX === mineX && foodY === mineY) valid = false;
-                // Avoid other mines
-                mines.forEach(mine => { if (mine.x === mineX && mine.y === mineY) valid = false; });
-                
-                // Try to avoid spawning directly in front of the snake's head (give player time to react)
-                if (Math.abs(mineX - snake[0].x) <= gridSize && Math.abs(mineY - snake[0].y) <= gridSize) {
-                    valid = false;
-                }
-            }
+            let mineX = Math.random() * (canvas.width - size*2) + size;
+            let mineY = Math.random() * (canvas.height - size*2) + size;
+            // Prevent spawning on head
+            if (Math.hypot(mineX - snake.x, mineY - snake.y) < 50) return generateMine();
             mines.push({x: mineX, y: mineY});
         }
 
         function changeDirection(event) {
-            const LEFT_KEY = 37, RIGHT_KEY = 39, UP_KEY = 38, DOWN_KEY = 40;
-            const W_KEY = 87, A_KEY = 65, S_KEY = 83, D_KEY = 68;
-            
-            if (changingDirection) return;
-            const keyPressed = event.keyCode;
-            const goingUp = dy === -gridSize, goingDown = dy === gridSize, goingRight = dx === gridSize, goingLeft = dx === -gridSize;
+            if (changingDirection || !currentUser) return;
+            const key = event.keyCode;
+            const up = snake.vy < 0, down = snake.vy > 0, right = snake.vx > 0, left = snake.vx < 0;
+            const spd = (difficulty === 'hard') ? 3.5 : 2.5;
 
-            if ((keyPressed === LEFT_KEY || keyPressed === A_KEY) && !goingRight) { dx = -gridSize; dy = 0; changingDirection = true; }
-            if ((keyPressed === UP_KEY || keyPressed === W_KEY) && !goingDown) { dx = 0; dy = -gridSize; changingDirection = true; }
-            if ((keyPressed === RIGHT_KEY || keyPressed === D_KEY) && !goingLeft) { dx = gridSize; dy = 0; changingDirection = true; }
-            if ((keyPressed === DOWN_KEY || keyPressed === S_KEY) && !goingUp) { dx = 0; dy = gridSize; changingDirection = true; }
+            if ((key === 37 || key === 65) && !right) { snake.vx = -spd; snake.vy = 0; changingDirection = true; }
+            if ((key === 38 || key === 87) && !down) { snake.vx = 0; snake.vy = -spd; changingDirection = true; }
+            if ((key === 39 || key === 68) && !left) { snake.vx = spd; snake.vy = 0; changingDirection = true; }
+            if ((key === 40 || key === 83) && !up) { snake.vx = 0; snake.vy = spd; changingDirection = true; }
         }
 
-        function triggerKey(keyCode) { changeDirection({keyCode: keyCode}); }
-
         function hasGameEnded() {
-            // Hit body
-            for (let i = 4; i < snake.length; i++) {
-                if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) return true;
+            // Wall
+            if (snake.x < 0 || snake.x > canvas.width || snake.y < 0 || snake.y > canvas.height) return true;
+            // Mines
+            for (let m of mines) {
+                if (Math.hypot(snake.x - m.x, snake.y - m.y) < size) return true;
             }
-            // Hit wall
-            if (snake[0].x < 0 || snake[0].x >= canvas.width || snake[0].y < 0 || snake[0].y >= canvas.height) return true;
-            
-            // Hit mine
-            for (let i = 0; i < mines.length; i++) {
-                if (snake[0].x === mines[i].x && snake[0].y === mines[i].y) return true;
+            // Self (Only check segments far enough down the history string)
+            for (let i = 15; i < snakeLength; i++) {
+                let index = i * spacing;
+                if (index < pathHistory.length) {
+                    if (Math.hypot(snake.x - pathHistory[index].x, snake.y - pathHistory[index].y) < size / 1.5) return true;
+                }
             }
-
             return false;
         }
 
         function drawGameOver() {
-            const computedStyle = getComputedStyle(document.body);
-            ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+            ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = "white";
             ctx.font = "bold 30px Arial";
             ctx.textAlign = "center";
-            ctx.fillText("Game Over!", canvas.width / 2, canvas.height / 2 - 15);
+            ctx.fillText("Game Over!", canvas.width / 2, canvas.height / 2 - 10);
             ctx.font = "16px Arial";
-            ctx.fillText("Press Space or Tap to Restart", canvas.width / 2, canvas.height / 2 + 20);
-            
-            document.addEventListener('keydown', restartGame);
+            ctx.fillText("Click to Restart", canvas.width / 2, canvas.height / 2 + 25);
             canvas.addEventListener('click', restartGame);
         }
 
         function restartGame(e) {
-            if (e.type === 'click' || e.keyCode === 32) {
-                document.removeEventListener('keydown', restartGame);
-                canvas.removeEventListener('click', restartGame);
-                cancelAnimationFrame(animationId);
-                
-                score = 0;
-                scoreElement.innerHTML = score;
-                dx = gridSize; dy = 0;
-                snake = [{x: 200, y: 200}, {x: 180, y: 200}, {x: 160, y: 200}];
-                mines = [];
-                generateFood();
-                
-                lastTime = performance.now();
-                requestAnimationFrame(gameLoop);
-            }
-        }
-
-        // --- UI & SETTINGS LOGIC ---
-
-        function setupPalette() {
-            const container = document.getElementById('paletteContainer');
-            hues.forEach(hue => {
-                const swatch = document.createElement('div');
-                swatch.className = 'swatch';
-                swatch.style.backgroundColor = `hsl(${hue}, 80%, 50%)`;
-                swatch.onclick = () => selectColor(hue, swatch);
-                container.appendChild(swatch);
-            });
-        }
-
-        function selectColor(hue, swatchElement) {
-            currentHue = hue;
-            localStorage.setItem('snakeHue', hue);
+            if (!currentUser) return;
+            canvas.removeEventListener('click', restartGame);
+            cancelAnimationFrame(animationId);
             
-            document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
-            if(swatchElement) swatchElement.classList.add('selected');
-        }
-
-        function openModal(id) {
-            isPaused = true;
-            document.getElementById(id).style.display = "flex";
-            if(id === 'highscoresModal') loadHighScoresUI();
-        }
-
-        function closeModal(id) {
-            document.getElementById(id).style.display = "none";
+            score = 0; scoreElement.innerHTML = score;
+            const spd = (difficulty === 'hard') ? 3.5 : 2.5;
+            snake = { x: 200, y: 200, vx: spd, vy: 0 };
+            pathHistory = [];
+            snakeLength = 15;
+            mines = [];
+            generateFood();
+            
             isPaused = false;
+            requestAnimationFrame(gameLoop);
         }
+
+        // --- UI & DATA ---
+        function openModal(id) { isPaused = true; document.getElementById(id).style.display = "flex"; if(id === 'leaderboardModal') loadLeaderboardUI(); }
+        function closeModal(id) { document.getElementById(id).style.display = "none"; if(currentUser && !hasGameEnded()) { isPaused = false; requestAnimationFrame(gameLoop); } }
 
         function updateSettings() {
-            // Theme
-            const theme = document.getElementById('themeSelect').value;
-            document.body.className = theme;
-            localStorage.setItem('snakeTheme', theme);
-
-            // Difficulty
             difficulty = document.getElementById('difficultySelect').value;
-            localStorage.setItem('snakeDifficulty', difficulty);
-            
-            // Adjust speed instantly based on difficulty
-            speed = (difficulty === 'hard') ? 100 : 150;
-            
-            // Clear mines instantly if switched to easy
+            let spd = (difficulty === 'hard') ? 3.5 : 2.5;
+            if (snake.vx !== 0) snake.vx = (snake.vx > 0) ? spd : -spd;
+            if (snake.vy !== 0) snake.vy = (snake.vy > 0) ? spd : -spd;
             if (difficulty === 'easy') mines = [];
         }
 
-        function loadSettings() {
-            const savedTheme = localStorage.getItem('snakeTheme') || 'theme-default';
-            const savedHue = localStorage.getItem('snakeHue') || 120;
-            const savedDiff = localStorage.getItem('snakeDifficulty') || 'easy';
-
-            // Apply Theme
-            document.getElementById('themeSelect').value = savedTheme;
-            document.body.className = savedTheme;
-
-            // Apply Difficulty
-            document.getElementById('difficultySelect').value = savedDiff;
-            difficulty = savedDiff;
-            speed = (difficulty === 'hard') ? 100 : 150;
-
-            // Apply Color
-            currentHue = parseInt(savedHue);
-            const swatches = document.querySelectorAll('.swatch');
-            const targetSwatch = Array.from(swatches).find(s => s.style.backgroundColor === `hsl(${currentHue}, 80%, 50%)`);
-            if (targetSwatch) targetSwatch.classList.add('selected');
-        }
-
-        function saveHighScore(currentScore) {
-            if (currentScore === 0) return;
-            let scores = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
-            scores.push({ score: currentScore, date: new Date().toLocaleDateString(), mode: difficulty.toUpperCase() });
+        function saveLeaderboard(currentScore) {
+            if (currentScore === 0 || !currentUser) return;
+            let scores = JSON.parse(localStorage.getItem('snakeLeaderboard')) || [];
+            scores.push({ user: currentUser, score: currentScore, mode: difficulty.toUpperCase() });
             scores.sort((a, b) => b.score - a.score);
-            scores = scores.slice(0, 5);
-            localStorage.setItem('snakeHighScores', JSON.stringify(scores));
+            localStorage.setItem('snakeLeaderboard', JSON.stringify(scores.slice(0, 5)));
         }
 
-        function loadHighScoresUI() {
-            const list = document.getElementById('highscoreList');
+        function loadLeaderboardUI() {
+            const list = document.getElementById('leaderboardList');
             list.innerHTML = "";
-            let scores = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
-
-            if(scores.length === 0) {
-                list.innerHTML = "<li>No scores yet! Play a game.</li>";
-                return;
-            }
+            let scores = JSON.parse(localStorage.getItem('snakeLeaderboard')) || [];
+            if(scores.length === 0) return list.innerHTML = "<li>No scores yet!</li>";
 
             scores.forEach((entry, index) => {
                 const li = document.createElement('li');
-                li.innerHTML = `<span>#${index + 1} - ${entry.date} [${entry.mode}]</span> <strong>${entry.score} pts</strong>`;
+                li.innerHTML = `<div class="rank-user"><strong>#${index + 1}</strong> <span>${entry.user}</span></div>
+                                <div class="score-mode"><strong>${entry.score} pts</strong> <br><span style="font-size: 10px; color:#9ca3af;">${entry.mode}</span></div>`;
                 list.appendChild(li);
             });
         }
