@@ -19,7 +19,7 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             min-height: 100vh; margin: 0; background-color: var(--bg-color); color: var(--text-color);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden; /* Prevent scrolling while playing on mobile */
+            overflow: hidden; 
         }
 
         .header { display: flex; justify-content: space-between; width: 95vw; max-width: 400px; margin-bottom: 10px; align-items: center; }
@@ -27,10 +27,9 @@
         .user-info { font-size: 14px; color: #9ca3af; }
         
         .controls { display: flex; gap: 8px; }
-        button { background-color: var(--btn-bg); color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button { background-color: var(--btn-bg); color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:hover { background-color: var(--btn-hover); }
 
-        /* Responsive Canvas */
         canvas { 
             background-color: var(--canvas-bg); 
             border: 2px solid var(--border-color); 
@@ -40,12 +39,11 @@
             max-width: 400px;
             height: 95vw;
             max-height: 400px;
-            touch-action: none; /* Prevent swipe scrolling on the canvas */
+            touch-action: none; 
         }
 
-        /* Mobile Controls (D-Pad) */
         .mobile-controls {
-            display: none; /* Hidden on desktop */
+            display: none; 
             grid-template-columns: 60px 60px 60px;
             grid-template-rows: 60px 60px 60px;
             gap: 10px;
@@ -60,7 +58,7 @@
             justify-content: center;
             align-items: center;
             user-select: none;
-            touch-action: manipulation; /* Prevent zoom on fast taps */
+            touch-action: manipulation; 
         }
         .d-btn:active { background-color: var(--btn-hover); }
 
@@ -70,10 +68,9 @@
         #btn-down { grid-column: 2; grid-row: 3; }
 
         @media (max-width: 768px) {
-            .mobile-controls { display: grid; } /* Show on mobile */
+            .mobile-controls { display: grid; } 
         }
 
-        /* Modals */
         .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 100; }
         .modal-content { background-color: var(--modal-bg); padding: 30px; border-radius: 10px; width: 90%; max-width: 350px; border: 1px solid var(--border-color); }
         .modal h2 { margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
@@ -84,10 +81,13 @@
         
         .error-msg { color: #ef4444; font-size: 12px; margin-top: 5px; min-height: 15px; }
 
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; }
+        .tab-btn { flex: 1; background-color: transparent; border: 1px solid var(--border-color); color: var(--text-color); }
+        .tab-btn.active { background-color: var(--btn-bg); border-color: var(--btn-bg); }
+
         .leaderboard-list { list-style: none; padding: 0; margin: 0 0 20px 0; font-size: 14px;}
         .leaderboard-list li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color); }
         .rank-user { display: flex; gap: 10px; }
-        .score-mode { text-align: right; }
     </style>
 </head>
 <body>
@@ -115,7 +115,7 @@
     <div id="nameModal" class="modal">
         <div class="modal-content">
             <h2>Welcome</h2>
-            <p style="font-size: 12px; color: #9ca3af;">Enter your player name to join the leaderboard.</p>
+            <p style="font-size: 12px; color: #9ca3af;">Enter your player name.</p>
             <div class="input-group">
                 <input type="text" id="playerNameInput" placeholder="Enter your name" maxlength="15">
             </div>
@@ -134,6 +134,19 @@
                     <option value="hard">Hard (Fast, Neon Mines!)</option>
                 </select>
             </div>
+            <div class="input-group">
+                <label>Snake Color</label>
+                <select id="colorSelect" onchange="updateSettings()">
+                    <option value="blue">Aqua Force (Blue to Cyan)</option>
+                    <option value="fire">Dragon Fire (Red to Yellow)</option>
+                    <option value="neon">Cyberpunk (Purple to Pink)</option>
+                    <option value="toxic">Toxic Waste (Green to Lime)</option>
+                    <option value="sunset">Miami Sunset (Orange to Pink)</option>
+                    <option value="vapor">Vaporwave (Cyan to Purple)</option>
+                    <option value="electric">Electric Surge (Yellow to Cyan)</option>
+                    <option value="berry">Wild Berry (Pink to Purple)</option>
+                </select>
+            </div>
             <button style="width: 100%; margin-top: 10px;" onclick="closeModal('settingsModal')">Done</button>
             <button style="width: 100%; margin-top: 10px; background-color: #ef4444;" onclick="changeName()">Change Name</button>
         </div>
@@ -142,6 +155,10 @@
     <div id="leaderboardModal" class="modal">
         <div class="modal-content">
             <h2>Top 5 High Scores</h2>
+            <div class="tabs">
+                <button class="tab-btn active" id="tab-EASY" onclick="switchTab('EASY')">Easy</button>
+                <button class="tab-btn" id="tab-HARD" onclick="switchTab('HARD')">Hard</button>
+            </div>
             <ul id="leaderboardList" class="leaderboard-list"></ul>
             <button style="width: 100%;" onclick="closeModal('leaderboardModal')">Close</button>
         </div>
@@ -165,7 +182,7 @@
             localStorage.setItem('snakePlayerName', name);
             document.getElementById('nameModal').style.display = 'none';
             document.getElementById('displayUsername').innerText = `Player: ${currentUser}`;
-            restartGame({type: 'click'});
+            restartGame();
         }
 
         function changeName() {
@@ -187,7 +204,10 @@
         
         let score = 0;
         let difficulty = "easy";
-        let speed = 4; 
+        let activeColorKey = "blue";
+        
+        // Speed adjusted! Easy = 2px/frame, Hard = 4px/frame
+        let speed = 2; 
         
         let currentDir = 'RIGHT';
         let queuedDir = 'RIGHT';
@@ -199,6 +219,18 @@
         let food = {x: 0, y: 0};
         let mines = [];
 
+        // Gradient color palettes mapped by Hue
+        const colorThemes = {
+            blue: { h1: 220, h2: 180, s: '100%', l: '60%' },
+            fire: { h1: 0, h2: 60, s: '100%', l: '55%' },
+            neon: { h1: 280, h2: 330, s: '100%', l: '60%' },
+            toxic: { h1: 130, h2: 70, s: '100%', l: '50%' },
+            sunset: { h1: 25, h2: 320, s: '100%', l: '60%' },
+            vapor: { h1: 180, h2: 280, s: '100%', l: '65%' },
+            electric: { h1: 60, h2: 180, s: '100%', l: '55%' },
+            berry: { h1: 340, h2: 270, s: '100%', l: '60%' }
+        };
+
         // --- CONTROLS LOGIC ---
         function setDirection(newDir) {
             if (!currentUser) return;
@@ -208,7 +240,6 @@
             if (newDir === 'DOWN' && currentDir !== 'UP') queuedDir = 'DOWN';
         }
 
-        // Keyboard Event Listener
         document.addEventListener("keydown", (e) => {
             const key = e.keyCode;
             if (key === 37 || key === 65) setDirection('LEFT');
@@ -217,20 +248,17 @@
             if (key === 40 || key === 83) setDirection('DOWN');
         });
 
-        // Mobile Button Event Listeners
         const setupMobileBtn = (id, dir) => {
             const btn = document.getElementById(id);
-            // Handle both touch and mouse clicks on the D-Pad smoothly
             const handler = (e) => { e.preventDefault(); setDirection(dir); };
             btn.addEventListener('touchstart', handler, {passive: false});
             btn.addEventListener('mousedown', handler);
         };
+        
         setupMobileBtn('btn-up', 'UP');
         setupMobileBtn('btn-left', 'LEFT');
         setupMobileBtn('btn-right', 'RIGHT');
         setupMobileBtn('btn-down', 'DOWN');
-
-        if (currentUser) requestAnimationFrame(gameLoop);
 
         function gameLoop() {
             if (isPaused || !currentUser) return;
@@ -281,6 +309,7 @@
             ctx.fillStyle = '#1f2937';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            // Draw Mines
             mines.forEach(mine => {
                 ctx.shadowBlur = 15;
                 ctx.shadowColor = '#ff0044';
@@ -297,23 +326,46 @@
             });
             ctx.shadowBlur = 0; 
 
+            // Draw Food (Apple)
             ctx.fillStyle = '#10b981';
             ctx.beginPath();
             ctx.arc(food.x + size/2, food.y + size/2, size/2.2, 0, Math.PI * 2);
             ctx.fill();
 
+            // Draw Gradient Snake
             let spacing = size / speed; 
-            for (let i = 0; i < snakeLength; i++) {
+            let theme = colorThemes[activeColorKey];
+
+            // We draw tail first, head last, so the head and eyes overlap the body beautifully
+            for (let i = snakeLength - 1; i >= 0; i--) {
                 let index = i * spacing;
-                if (index >= pathHistory.length) break;
+                if (index >= pathHistory.length) continue;
                 
                 let pos = pathHistory[index];
-                let lightness = Math.max(30, 60 - (i * 2));
                 
-                ctx.fillStyle = `hsl(210, 80%, ${lightness}%)`;
+                // Calculate dynamic gradient across the length of the snake
+                let ratio = i / snakeLength;
+                let currentHue = theme.h1 + (theme.h2 - theme.h1) * ratio;
+                
+                ctx.fillStyle = `hsl(${currentHue}, ${theme.s}, ${theme.l})`;
                 ctx.beginPath();
                 ctx.arc(pos.x + size/2, pos.y + size/2, size/2, 0, Math.PI * 2);
                 ctx.fill();
+
+                // Draw Head & Eyes (when i is 0)
+                if (i === 0) {
+                    ctx.fillStyle = '#000000'; // Black dots for eyes
+                    let d = 4.5; // distance from center
+                    let ex1, ey1, ex2, ey2;
+                    
+                    if (currentDir === 'RIGHT') { ex1 = d; ey1 = -d; ex2 = d; ey2 = d; }
+                    else if (currentDir === 'LEFT') { ex1 = -d; ey1 = -d; ex2 = -d; ey2 = d; }
+                    else if (currentDir === 'UP') { ex1 = -d; ey1 = -d; ex2 = d; ey2 = -d; }
+                    else if (currentDir === 'DOWN') { ex1 = -d; ey1 = d; ex2 = d; ey2 = d; }
+
+                    ctx.beginPath(); ctx.arc(pos.x + size/2 + ex1, pos.y + size/2 + ey1, 2.5, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(pos.x + size/2 + ex2, pos.y + size/2 + ey2, 2.5, 0, Math.PI*2); ctx.fill();
+                }
             }
         }
 
@@ -368,16 +420,19 @@
             ctx.fillText("Game Over!", canvas.width / 2, canvas.height / 2 - 10);
             ctx.font = "16px Arial";
             ctx.fillText("Tap or Click to Restart", canvas.width / 2, canvas.height / 2 + 25);
-            canvas.addEventListener('click', restartGame);
+            
+            setTimeout(() => {
+                canvas.addEventListener('click', restartGame);
+            }, 300);
         }
 
-        function restartGame(e) {
+        function restartGame() {
             if (!currentUser) return;
             canvas.removeEventListener('click', restartGame);
             cancelAnimationFrame(animationId);
             
             score = 0; scoreElement.innerHTML = score;
-            speed = (difficulty === 'hard') ? 5 : 4;
+            speed = (difficulty === 'hard') ? 4 : 2; // New adjusted speeds
             currentDir = 'RIGHT'; queuedDir = 'RIGHT';
             snake = { x: 200, y: 200, vx: speed, vy: 0 };
             pathHistory = [];
@@ -390,30 +445,59 @@
         }
 
         // --- UI & DATA LOGIC ---
-        function openModal(id) { isPaused = true; document.getElementById(id).style.display = "flex"; if(id === 'leaderboardModal') loadLeaderboardUI(); }
-        function closeModal(id) { document.getElementById(id).style.display = "none"; if(currentUser && !hasGameEnded()) { isPaused = false; requestAnimationFrame(gameLoop); } }
+        let currentLeaderboardTab = 'EASY';
+
+        function openModal(id) { 
+            isPaused = true; 
+            document.getElementById(id).style.display = "flex"; 
+            if(id === 'leaderboardModal') {
+                switchTab(difficulty.toUpperCase()); // Open to current mode
+            }
+        }
+        
+        function closeModal(id) { 
+            document.getElementById(id).style.display = "none"; 
+            if(currentUser && !hasGameEnded()) { 
+                isPaused = false; requestAnimationFrame(gameLoop); 
+            } 
+        }
 
         function updateSettings() {
             difficulty = document.getElementById('difficultySelect').value;
-            speed = (difficulty === 'hard') ? 5 : 4;
+            activeColorKey = document.getElementById('colorSelect').value;
+            
+            speed = (difficulty === 'hard') ? 4 : 2;
             if (snake.vx !== 0) snake.vx = (snake.vx > 0) ? speed : -speed;
             if (snake.vy !== 0) snake.vy = (snake.vy > 0) ? speed : -speed;
             if (difficulty === 'easy') mines = [];
+            
+            // Draw one frame to update color preview instantly if paused
+            if(isPaused && pathHistory.length > 0) renderGraphics(); 
+        }
+
+        // --- LEADERBOARD TABS ---
+        function switchTab(mode) {
+            currentLeaderboardTab = mode;
+            document.getElementById('tab-EASY').classList.toggle('active', mode === 'EASY');
+            document.getElementById('tab-HARD').classList.toggle('active', mode === 'HARD');
+            loadLeaderboardUI();
         }
 
         function saveLeaderboard(currentScore) {
             if (currentScore === 0 || !currentUser) return;
             
             let scores = JSON.parse(localStorage.getItem('snakeLocalScores')) || [];
-            let existingPlayerIndex = scores.findIndex(entry => entry.username === currentUser);
+            let currentMode = difficulty.toUpperCase();
+            
+            // Allow separate high scores for EASY and HARD per username
+            let existingPlayerIndex = scores.findIndex(entry => entry.username === currentUser && entry.mode === currentMode);
             
             if (existingPlayerIndex !== -1) {
                 if (currentScore > scores[existingPlayerIndex].score) {
                     scores[existingPlayerIndex].score = currentScore;
-                    scores[existingPlayerIndex].mode = difficulty.toUpperCase();
                 }
             } else {
-                scores.push({ username: currentUser, score: currentScore, mode: difficulty.toUpperCase() });
+                scores.push({ username: currentUser, score: currentScore, mode: currentMode });
             }
             
             scores.sort((a, b) => b.score - a.score);
@@ -425,16 +509,27 @@
             list.innerHTML = ""; 
             
             let scores = JSON.parse(localStorage.getItem('snakeLocalScores')) || [];
-            let top5 = scores.slice(0, 5);
             
-            if(top5.length === 0) return list.innerHTML = "<li>No scores yet!</li>";
+            // Filter by the currently selected tab
+            let filteredScores = scores.filter(entry => entry.mode === currentLeaderboardTab);
+            let top5 = filteredScores.slice(0, 5);
+            
+            if(top5.length === 0) return list.innerHTML = `<li>No ${currentLeaderboardTab.toLowerCase()} scores yet!</li>`;
 
             top5.forEach((entry, index) => {
                 const li = document.createElement('li');
                 li.innerHTML = `<div class="rank-user"><strong>#${index + 1}</strong> <span>${entry.username}</span></div>
-                                <div class="score-mode"><strong>${entry.score} pts</strong> <br><span style="font-size: 10px; color:#9ca3af;">${entry.mode}</span></div>`;
+                                <div><strong>${entry.score} pts</strong></div>`;
                 list.appendChild(li);
             });
+        }
+
+        // --- STARTUP LOGIC ---
+        if (currentUser) {
+            restartGame();
+        } else {
+            generateFood();
+            renderGraphics();
         }
     </script>
 </body>
