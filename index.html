@@ -143,17 +143,45 @@
         }
 
         .setting-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        select, input[type="color"] {
+        select {
             padding: 5px;
             border-radius: 4px;
             border: 1px solid var(--border-color);
             cursor: pointer;
+            background: var(--canvas-bg);
+            color: var(--text-color);
+        }
+
+        /* Color Palette Grid */
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .swatch {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s;
+        }
+
+        .swatch:hover {
+            transform: scale(1.2);
+        }
+        
+        .swatch.selected {
+            border: 2px solid white;
+            box-shadow: 0 0 8px rgba(255,255,255,0.8);
         }
 
         .close-btn {
@@ -223,8 +251,16 @@
             <h2>Customization</h2>
             
             <div class="setting-group">
+                <label>Difficulty</label>
+                <select id="difficultySelect" onchange="updateSettings()">
+                    <option value="easy">Easy (Slower, No Mines)</option>
+                    <option value="hard">Hard (Fast, Mines!)</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
                 <label>Theme</label>
-                <select id="themeSelect" onchange="updateTheme()">
+                <select id="themeSelect" onchange="updateSettings()">
                     <option value="theme-default">Classic Dark</option>
                     <option value="theme-midnight">Midnight (Dark)</option>
                     <option value="theme-light">Minimal (Light)</option>
@@ -232,14 +268,10 @@
                 </select>
             </div>
 
-            <div class="setting-group">
-                <label>Snake Head Color</label>
-                <input type="color" id="headColor" value="#27ae60" onchange="updateColors()">
-            </div>
-
-            <div class="setting-group">
-                <label>Snake Body Color</label>
-                <input type="color" id="bodyColor" value="#2ecc71" onchange="updateColors()">
+            <div>
+                <label>Snake Gradient Color</label>
+                <div class="color-palette" id="paletteContainer">
+                    </div>
             </div>
 
             <button class="close-btn" onclick="closeModal('settingsModal')">Done</button>
@@ -249,8 +281,7 @@
     <div id="highscoresModal" class="modal">
         <div class="modal-content">
             <h2>Top 5 Highscores</h2>
-            <ul id="highscoreList" class="highscore-list">
-                </ul>
+            <ul id="highscoreList" class="highscore-list"></ul>
             <button class="close-btn" onclick="closeModal('highscoresModal')">Close</button>
         </div>
     </div>
@@ -262,64 +293,88 @@
 
         // Game Configuration
         const gridSize = 20;
-        let speed = 100;
-        let gameLoop;
         let isPaused = false;
+        let animationId;
+        let lastTime = 0;
+        let logicTimer = 0;
         
         // State
         let score = 0;
+        let difficulty = "easy";
+        let speed = 150; 
         let changingDirection = false;
         let dx = gridSize;
         let dy = 0;
         let snake = [{x: 200, y: 200}, {x: 180, y: 200}, {x: 160, y: 200}];
         let foodX, foodY;
+        let mines = [];
 
-        // Customization State
-        let colorHead = "#27ae60";
-        let colorBody = "#2ecc71";
+        // 10 HSL Hues for Gradient Colors
+        const hues = [0, 30, 50, 120, 160, 190, 220, 270, 300, 330];
+        let currentHue = 120; // Default Green
 
         // Initialization
+        setupPalette();
         loadSettings();
         generateFood();
         document.addEventListener("keydown", changeDirection);
-        main();
+        
+        // Start high-FPS Game Loop
+        requestAnimationFrame(gameLoop);
 
-        // --- GAME LOGIC ---
+        // --- GAME ENGINE (High FPS Render Loop) ---
 
-        function main() {
+        function gameLoop(timestamp) {
             if (hasGameEnded()) {
                 saveHighScore(score);
                 drawGameOver();
                 return;
             }
 
-            if (isPaused) return; 
+            if (isPaused) {
+                lastTime = timestamp; // Prevent logic jump when unpausing
+                animationId = requestAnimationFrame(gameLoop);
+                return;
+            }
 
-            changingDirection = false;
-            gameLoop = setTimeout(function onTick() {
-                clearCanvas();
-                drawFood();
+            // Calculate time passed since last frame
+            const deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+            logicTimer += deltaTime;
+
+            // Update logic only when enough time has passed (controls speed)
+            if (logicTimer >= speed) {
                 advanceSnake();
-                drawSnake();
-                main();
-            }, speed);
+                changingDirection = false;
+                logicTimer = 0; // Reset timer
+            }
+
+            // Render visuals at max monitor refresh rate
+            clearCanvas();
+            drawMines();
+            drawFood();
+            drawSnake();
+
+            animationId = requestAnimationFrame(gameLoop);
         }
 
+        // --- DRAWING ---
+
         function clearCanvas() {
-            // Pulls the background color directly from the CSS variable
             const computedStyle = getComputedStyle(document.body);
             ctx.fillStyle = computedStyle.getPropertyValue('--canvas-bg').trim();
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
         function drawSnake() {
+            const computedStyle = getComputedStyle(document.body);
+            ctx.strokeStyle = computedStyle.getPropertyValue('--bg-color').trim();
+
             snake.forEach((part, index) => {
-                ctx.fillStyle = index === 0 ? colorHead : colorBody;
+                // Calculate lightness for gradient effect (darkens as it reaches tail)
+                let lightness = Math.max(25, 65 - (index * 2));
                 
-                // Pull border color from CSS
-                const computedStyle = getComputedStyle(document.body);
-                ctx.strokeStyle = computedStyle.getPropertyValue('--bg-color').trim();
-                
+                ctx.fillStyle = `hsl(${currentHue}, 80%, ${lightness}%)`;
                 ctx.fillRect(part.x, part.y, gridSize, gridSize);
                 ctx.strokeRect(part.x, part.y, gridSize, gridSize);
 
@@ -336,7 +391,7 @@
             else if (dx < 0) { eye1X = headX + eyeRadius * 1.5; eye1Y = headY + 5; eye2X = headX + eyeRadius * 1.5; eye2Y = headY + 15; } 
             else if (dy < 0) { eye1X = headX + 5; eye1Y = headY + eyeRadius * 1.5; eye2X = headX + 15; eye2Y = headY + eyeRadius * 1.5; } 
             else if (dy > 0) { eye1X = headX + 5; eye1Y = headY + gridSize - eyeRadius * 1.5; eye2X = headX + 15; eye2Y = headY + gridSize - eyeRadius * 1.5; } 
-            else { eye1X = headX + gridSize - eyeRadius * 1.5; eye1Y = headY + 5; eye2X = headX + gridSize - eyeRadius * 1.5; eye2Y = headY + 15; } // Default
+            else { eye1X = headX + gridSize - eyeRadius * 1.5; eye1Y = headY + 5; eye2X = headX + gridSize - eyeRadius * 1.5; eye2Y = headY + 15; } 
 
             ctx.beginPath(); ctx.arc(eye1X, eye1Y, eyeRadius, 0, Math.PI * 2, true); ctx.fill();
             ctx.beginPath(); ctx.arc(eye2X, eye2Y, eyeRadius, 0, Math.PI * 2, true); ctx.fill();
@@ -346,6 +401,34 @@
             ctx.beginPath(); ctx.arc(eye2X, eye2Y, pupilRadius, 0, Math.PI * 2, true); ctx.fill();
         }
 
+        function drawFood() {
+            ctx.fillStyle = '#e74c3c';
+            ctx.strokeStyle = '#c0392b';
+            ctx.fillRect(foodX, foodY, gridSize, gridSize);
+            ctx.strokeRect(foodX, foodY, gridSize, gridSize);
+        }
+
+        function drawMines() {
+            mines.forEach(mine => {
+                ctx.fillStyle = '#34495e'; // Dark outer shell
+                ctx.strokeStyle = '#2c3e50';
+                
+                // Draw a circle instead of square for mines
+                ctx.beginPath();
+                ctx.arc(mine.x + gridSize/2, mine.y + gridSize/2, gridSize/2.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Draw flashing red core
+                ctx.fillStyle = (Date.now() % 1000 < 500) ? '#e74c3c' : '#c0392b'; 
+                ctx.beginPath();
+                ctx.arc(mine.x + gridSize/2, mine.y + gridSize/2, gridSize/4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // --- GAME LOGIC ---
+
         function advanceSnake() {
             const head = {x: snake[0].x + dx, y: snake[0].y + dy};
             snake.unshift(head);
@@ -354,28 +437,54 @@
                 score += 10;
                 scoreElement.innerHTML = score;
                 generateFood();
+                
+                // Spawn a mine in Hard mode every time food is eaten
+                if (difficulty === 'hard') {
+                    generateMine();
+                }
             } else {
                 snake.pop();
             }
         }
 
-        function drawFood() {
-            ctx.fillStyle = '#e74c3c';
-            ctx.strokeStyle = '#c0392b';
-            ctx.fillRect(foodX, foodY, gridSize, gridSize);
-            ctx.strokeRect(foodX, foodY, gridSize, gridSize);
-        }
-
-        function randomFood(min, max) {
+        function randomGridCoord(min, max) {
             return Math.round((Math.random() * (max - min) + min) / gridSize) * gridSize;
         }
 
         function generateFood() {
-            foodX = randomFood(0, canvas.width - gridSize);
-            foodY = randomFood(0, canvas.height - gridSize);
-            snake.forEach(part => {
-                if (part.x == foodX && part.y == foodY) generateFood();
-            });
+            let valid = false;
+            while (!valid) {
+                foodX = randomGridCoord(0, canvas.width - gridSize);
+                foodY = randomGridCoord(0, canvas.height - gridSize);
+                valid = true;
+                
+                // Make sure food doesn't spawn on snake or mines
+                snake.forEach(part => { if (part.x === foodX && part.y === foodY) valid = false; });
+                mines.forEach(mine => { if (mine.x === foodX && mine.y === foodY) valid = false; });
+            }
+        }
+
+        function generateMine() {
+            let valid = false;
+            let mineX, mineY;
+            while (!valid) {
+                mineX = randomGridCoord(0, canvas.width - gridSize);
+                mineY = randomGridCoord(0, canvas.height - gridSize);
+                valid = true;
+                
+                // Avoid snake
+                snake.forEach(part => { if (part.x === mineX && part.y === mineY) valid = false; });
+                // Avoid food
+                if (foodX === mineX && foodY === mineY) valid = false;
+                // Avoid other mines
+                mines.forEach(mine => { if (mine.x === mineX && mine.y === mineY) valid = false; });
+                
+                // Try to avoid spawning directly in front of the snake's head (give player time to react)
+                if (Math.abs(mineX - snake[0].x) <= gridSize && Math.abs(mineY - snake[0].y) <= gridSize) {
+                    valid = false;
+                }
+            }
+            mines.push({x: mineX, y: mineY});
         }
 
         function changeDirection(event) {
@@ -392,14 +501,22 @@
             if ((keyPressed === DOWN_KEY || keyPressed === S_KEY) && !goingUp) { dx = 0; dy = gridSize; changingDirection = true; }
         }
 
-        // Helper for mobile buttons
         function triggerKey(keyCode) { changeDirection({keyCode: keyCode}); }
 
         function hasGameEnded() {
+            // Hit body
             for (let i = 4; i < snake.length; i++) {
                 if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) return true;
             }
-            return snake[0].x < 0 || snake[0].x >= canvas.width || snake[0].y < 0 || snake[0].y >= canvas.height;
+            // Hit wall
+            if (snake[0].x < 0 || snake[0].x >= canvas.width || snake[0].y < 0 || snake[0].y >= canvas.height) return true;
+            
+            // Hit mine
+            for (let i = 0; i < mines.length; i++) {
+                if (snake[0].x === mines[i].x && snake[0].y === mines[i].y) return true;
+            }
+
+            return false;
         }
 
         function drawGameOver() {
@@ -413,7 +530,6 @@
             ctx.font = "16px Arial";
             ctx.fillText("Press Space or Tap to Restart", canvas.width / 2, canvas.height / 2 + 20);
             
-            // Allow restart
             document.addEventListener('keydown', restartGame);
             canvas.addEventListener('click', restartGame);
         }
@@ -422,16 +538,40 @@
             if (e.type === 'click' || e.keyCode === 32) {
                 document.removeEventListener('keydown', restartGame);
                 canvas.removeEventListener('click', restartGame);
+                cancelAnimationFrame(animationId);
+                
                 score = 0;
                 scoreElement.innerHTML = score;
                 dx = gridSize; dy = 0;
                 snake = [{x: 200, y: 200}, {x: 180, y: 200}, {x: 160, y: 200}];
+                mines = [];
                 generateFood();
-                main();
+                
+                lastTime = performance.now();
+                requestAnimationFrame(gameLoop);
             }
         }
 
-        // --- UI & DATABASE (LOCAL STORAGE) LOGIC ---
+        // --- UI & SETTINGS LOGIC ---
+
+        function setupPalette() {
+            const container = document.getElementById('paletteContainer');
+            hues.forEach(hue => {
+                const swatch = document.createElement('div');
+                swatch.className = 'swatch';
+                swatch.style.backgroundColor = `hsl(${hue}, 80%, 50%)`;
+                swatch.onclick = () => selectColor(hue, swatch);
+                container.appendChild(swatch);
+            });
+        }
+
+        function selectColor(hue, swatchElement) {
+            currentHue = hue;
+            localStorage.setItem('snakeHue', hue);
+            
+            document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+            if(swatchElement) swatchElement.classList.add('selected');
+        }
 
         function openModal(id) {
             isPaused = true;
@@ -442,52 +582,52 @@
         function closeModal(id) {
             document.getElementById(id).style.display = "none";
             isPaused = false;
-            if(!hasGameEnded()) main(); // Resume game
         }
 
-        function updateTheme() {
+        function updateSettings() {
+            // Theme
             const theme = document.getElementById('themeSelect').value;
             document.body.className = theme;
             localStorage.setItem('snakeTheme', theme);
-            if(isPaused) clearCanvas(); // Force redraw if paused
-            if(isPaused) drawSnake();
-            if(isPaused) drawFood();
-        }
 
-        function updateColors() {
-            colorHead = document.getElementById('headColor').value;
-            colorBody = document.getElementById('bodyColor').value;
-            localStorage.setItem('snakeHeadColor', colorHead);
-            localStorage.setItem('snakeBodyColor', colorBody);
-            if(isPaused) drawSnake(); // update visual immediately
+            // Difficulty
+            difficulty = document.getElementById('difficultySelect').value;
+            localStorage.setItem('snakeDifficulty', difficulty);
+            
+            // Adjust speed instantly based on difficulty
+            speed = (difficulty === 'hard') ? 100 : 150;
+            
+            // Clear mines instantly if switched to easy
+            if (difficulty === 'easy') mines = [];
         }
 
         function loadSettings() {
             const savedTheme = localStorage.getItem('snakeTheme') || 'theme-default';
-            const savedHead = localStorage.getItem('snakeHeadColor') || '#27ae60';
-            const savedBody = localStorage.getItem('snakeBodyColor') || '#2ecc71';
+            const savedHue = localStorage.getItem('snakeHue') || 120;
+            const savedDiff = localStorage.getItem('snakeDifficulty') || 'easy';
 
+            // Apply Theme
             document.getElementById('themeSelect').value = savedTheme;
             document.body.className = savedTheme;
 
-            colorHead = savedHead;
-            colorBody = savedBody;
-            document.getElementById('headColor').value = savedHead;
-            document.getElementById('bodyColor').value = savedBody;
+            // Apply Difficulty
+            document.getElementById('difficultySelect').value = savedDiff;
+            difficulty = savedDiff;
+            speed = (difficulty === 'hard') ? 100 : 150;
+
+            // Apply Color
+            currentHue = parseInt(savedHue);
+            const swatches = document.querySelectorAll('.swatch');
+            const targetSwatch = Array.from(swatches).find(s => s.style.backgroundColor === `hsl(${currentHue}, 80%, 50%)`);
+            if (targetSwatch) targetSwatch.classList.add('selected');
         }
 
         function saveHighScore(currentScore) {
             if (currentScore === 0) return;
             let scores = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
-            
-            // Get current date
-            const date = new Date().toLocaleDateString();
-            scores.push({ score: currentScore, date: date });
-            
-            // Sort descending and keep top 5
+            scores.push({ score: currentScore, date: new Date().toLocaleDateString(), mode: difficulty.toUpperCase() });
             scores.sort((a, b) => b.score - a.score);
             scores = scores.slice(0, 5);
-            
             localStorage.setItem('snakeHighScores', JSON.stringify(scores));
         }
 
@@ -503,7 +643,7 @@
 
             scores.forEach((entry, index) => {
                 const li = document.createElement('li');
-                li.innerHTML = `<span>#${index + 1} - ${entry.date}</span> <strong>${entry.score} pts</strong>`;
+                li.innerHTML = `<span>#${index + 1} - ${entry.date} [${entry.mode}]</span> <strong>${entry.score} pts</strong>`;
                 list.appendChild(li);
             });
         }
