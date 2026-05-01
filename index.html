@@ -40,8 +40,6 @@
         .input-group label { font-size: 12px; margin-bottom: 5px; color: #9ca3af;}
         .input-group input, select { padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--canvas-bg); color: white; }
         
-        .auth-buttons { display: flex; gap: 10px; margin-top: 20px; }
-        .auth-buttons button { flex: 1; }
         .error-msg { color: #ef4444; font-size: 12px; margin-top: 5px; min-height: 15px; }
 
         .leaderboard-list { list-style: none; padding: 0; margin: 0 0 20px 0; font-size: 14px;}
@@ -49,12 +47,13 @@
         .rank-user { display: flex; gap: 10px; }
         .score-mode { text-align: right; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
     <div class="header">
         <div>
-            <div class="user-info" id="displayUsername">Not logged in</div>
+            <div class="user-info" id="displayUsername">Not playing</div>
             <div class="score-board">Score: <span id="score">0</span></div>
         </div>
         <div class="controls">
@@ -65,23 +64,15 @@
     
     <canvas id="gameCanvas" width="400" height="400"></canvas>
 
-    <div id="authModal" class="modal" style="display: flex;">
+    <div id="nameModal" class="modal">
         <div class="modal-content">
-            <h2>Player Login</h2>
-            <p style="font-size: 12px; color: #9ca3af;">Create a username and password to track your score.</p>
+            <h2>Welcome</h2>
+            <p style="font-size: 12px; color: #9ca3af;">Enter your player name to join the leaderboard.</p>
             <div class="input-group">
-                <label>Username (Case Sensitive)</label>
-                <input type="text" id="usernameInput" placeholder="Enter username">
+                <input type="text" id="playerNameInput" placeholder="Enter your name" maxlength="15">
             </div>
-            <div class="input-group">
-                <label>Password</label>
-                <input type="password" id="passwordInput" placeholder="Enter password">
-            </div>
-            <div id="authError" class="error-msg"></div>
-            <div class="auth-buttons">
-                <button onclick="login()">Login</button>
-                <button onclick="register()" style="background-color: #10b981;">Register</button>
-            </div>
+            <div id="nameError" class="error-msg"></div>
+            <button style="width: 100%; margin-top: 10px;" onclick="saveName()">Start Playing</button>
         </div>
     </div>
 
@@ -96,98 +87,78 @@
                 </select>
             </div>
             <button style="width: 100%; margin-top: 10px;" onclick="closeModal('settingsModal')">Done</button>
-            <button style="width: 100%; margin-top: 10px; background-color: #ef4444;" onclick="logout()">Logout</button>
+            <button style="width: 100%; margin-top: 10px; background-color: #ef4444;" onclick="changeName()">Change Name</button>
         </div>
     </div>
 
     <div id="leaderboardModal" class="modal">
         <div class="modal-content">
-            <h2>Top 5 Leaderboard</h2>
+            <h2>Top 5 Global Scores</h2>
             <ul id="leaderboardList" class="leaderboard-list"></ul>
             <button style="width: 100%;" onclick="closeModal('leaderboardModal')">Close</button>
         </div>
     </div>
 
     <script>
-        // --- MOCK AUTHENTICATION SYSTEM (FRONTEND ONLY) ---
-        let currentUser = null;
+        // --- SUPABASE CONFIGURATION ---
+        // ⚠️ PASTE YOUR KEYS HERE AGAIN! ⚠️
+        const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL'; 
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        function getDB() {
-            return JSON.parse(localStorage.getItem('snakeUsersDB')) || {};
-        }
-        function saveDB(db) {
-            localStorage.setItem('snakeUsersDB', JSON.stringify(db));
-        }
-
-        function register() {
-            const user = document.getElementById('usernameInput').value.trim();
-            const pass = document.getElementById('passwordInput').value.trim();
-            const errorDiv = document.getElementById('authError');
-            
-            if (!user || !pass) return errorDiv.innerText = "Fields cannot be empty!";
-            
-            let db = getDB();
-            if (db[user]) return errorDiv.innerText = "Username already exists!";
-            
-            db[user] = pass; // Storing plain text! (Insecure in real life)
-            saveDB(db);
-            
-            loginSuccess(user);
+        // --- NAME SYSTEM ---
+        let currentUser = localStorage.getItem('snakePlayerName');
+        
+        if (!currentUser) {
+            document.getElementById('nameModal').style.display = 'flex';
+        } else {
+            document.getElementById('displayUsername').innerText = `Player: ${currentUser}`;
         }
 
-        function login() {
-            const user = document.getElementById('usernameInput').value.trim();
-            const pass = document.getElementById('passwordInput').value.trim();
-            const errorDiv = document.getElementById('authError');
+        function saveName() {
+            const name = document.getElementById('playerNameInput').value.trim();
+            if (!name) return document.getElementById('nameError').innerText = "Name cannot be empty!";
             
-            let db = getDB();
-            if (!db[user]) return errorDiv.innerText = "Username not found!";
-            if (db[user] !== pass) return errorDiv.innerText = "Incorrect password!";
-            
-            loginSuccess(user);
+            currentUser = name;
+            localStorage.setItem('snakePlayerName', name);
+            document.getElementById('nameModal').style.display = 'none';
+            document.getElementById('displayUsername').innerText = `Player: ${currentUser}`;
+            restartGame({type: 'click'});
         }
 
-        function loginSuccess(user) {
-            currentUser = user;
-            document.getElementById('displayUsername').innerText = `Player: ${user}`;
-            document.getElementById('authModal').style.display = 'none';
-            document.getElementById('usernameInput').value = '';
-            document.getElementById('passwordInput').value = '';
-            document.getElementById('authError').innerText = '';
-            restartGame({type: 'click'}); // Start game
-        }
-
-        function logout() {
+        function changeName() {
             currentUser = null;
-            document.getElementById('displayUsername').innerText = "Not logged in";
+            document.getElementById('displayUsername').innerText = "Not playing";
             closeModal('settingsModal');
-            document.getElementById('authModal').style.display = 'flex';
+            document.getElementById('nameModal').style.display = 'flex';
             isPaused = true;
         }
 
-        // --- SMOOTH GAME ENGINE ---
+        // --- GAME ENGINE (Smooth Movement, Strict Grid Rules) ---
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const scoreElement = document.getElementById("score");
 
-        const size = 15; // Width/Height of snake and food
+        const size = 20; // Grid block size
         let isPaused = true;
         let animationId;
         
         let score = 0;
         let difficulty = "easy";
-        let baseSpeed = 2.5; // Pixels per frame
+        let speed = 4; // MUST divide smoothly into size (20). Easy = 4px/frame, Hard = 5px/frame
         
-        let snake = { x: 200, y: 200, vx: baseSpeed, vy: 0 };
+        let currentDir = 'RIGHT';
+        let queuedDir = 'RIGHT';
+
+        let snake = { x: 200, y: 200, vx: speed, vy: 0 };
         let pathHistory = []; 
-        let snakeLength = 15; // How many history nodes to trail
-        let spacing = 6; // Spacing between drawn segments
+        let snakeLength = 4;
 
         let food = {x: 0, y: 0};
         let mines = [];
-        let changingDirection = false;
 
-        document.addEventListener("keydown", changeDirection);
+        document.addEventListener("keydown", queueDirection);
+        if (currentUser) requestAnimationFrame(gameLoop); // Auto-start rendering if logged in
 
         function gameLoop() {
             if (isPaused || !currentUser) return;
@@ -205,71 +176,79 @@
         }
 
         function updatePhysics() {
-            // Move Head smoothly
+            // SNAP TO GRID RULE: Only allow turns when snake is perfectly aligned to a 20x20 block
+            if (snake.x % size === 0 && snake.y % size === 0) {
+                currentDir = queuedDir;
+                
+                if (currentDir === 'RIGHT') { snake.vx = speed; snake.vy = 0; }
+                else if (currentDir === 'LEFT') { snake.vx = -speed; snake.vy = 0; }
+                else if (currentDir === 'UP') { snake.vx = 0; snake.vy = -speed; }
+                else if (currentDir === 'DOWN') { snake.vx = 0; snake.vy = speed; }
+            }
+
+            // Move Head smoothly pixel-by-pixel
             snake.x += snake.vx;
             snake.y += snake.vy;
 
             // Save history for body to follow
             pathHistory.unshift({x: snake.x, y: snake.y});
             
-            // Remove old history
+            // Because speed varies, we calculate how many array items equal 1 grid block
+            let spacing = size / speed; 
+            
             if (pathHistory.length > snakeLength * spacing + 1) {
                 pathHistory.pop();
             }
 
-            // Check Food Collision (Distance based instead of grid)
-            const distToFood = Math.hypot(snake.x - food.x, snake.y - food.y);
-            if (distToFood < size) {
+            // Grid-aligned Food Collision
+            if (snake.x === food.x && snake.y === food.y) {
                 score += 10;
                 scoreElement.innerHTML = score;
-                snakeLength += 2; // Grow
+                snakeLength += 1;
                 generateFood();
                 if (difficulty === 'hard') generateMine();
             }
-
-            changingDirection = false;
         }
 
         function renderGraphics() {
-            // Clear canvas
             ctx.fillStyle = '#1f2937';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Mines (Neon Black/Red)
+            // Draw Mines
             mines.forEach(mine => {
                 ctx.shadowBlur = 15;
                 ctx.shadowColor = '#ff0044';
                 ctx.fillStyle = '#000000';
                 ctx.beginPath();
-                ctx.arc(mine.x, mine.y, size/1.5, 0, Math.PI * 2);
+                ctx.arc(mine.x + size/2, mine.y + size/2, size/2.2, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Red glowing core
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = (Date.now() % 800 < 400) ? '#ff0044' : '#4a0011';
                 ctx.beginPath();
-                ctx.arc(mine.x, mine.y, size/3, 0, Math.PI * 2);
+                ctx.arc(mine.x + size/2, mine.y + size/2, size/4, 0, Math.PI * 2);
                 ctx.fill();
             });
-            ctx.shadowBlur = 0; // Reset shadow
+            ctx.shadowBlur = 0; 
 
             // Draw Food
             ctx.fillStyle = '#10b981';
             ctx.beginPath();
-            ctx.arc(food.x, food.y, size/1.5, 0, Math.PI * 2);
+            ctx.arc(food.x + size/2, food.y + size/2, size/2.2, 0, Math.PI * 2);
             ctx.fill();
 
-            // Draw Snake (Smooth following)
+            // Draw Snake
+            let spacing = size / speed; 
             for (let i = 0; i < snakeLength; i++) {
                 let index = i * spacing;
                 if (index >= pathHistory.length) break;
                 
                 let pos = pathHistory[index];
-                let lightness = Math.max(30, 60 - (i * 1.5));
+                let lightness = Math.max(30, 60 - (i * 2));
                 
                 ctx.fillStyle = `hsl(210, 80%, ${lightness}%)`;
                 ctx.beginPath();
-                ctx.arc(pos.x, pos.y, size/1.2, 0, Math.PI * 2);
+                ctx.arc(pos.x + size/2, pos.y + size/2, size/2, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
@@ -277,42 +256,58 @@
         // --- GAME LOGIC ---
 
         function generateFood() {
-            food.x = Math.random() * (canvas.width - size*2) + size;
-            food.y = Math.random() * (canvas.height - size*2) + size;
+            let valid = false;
+            while(!valid) {
+                // Snap to 20x20 grid
+                food.x = Math.floor(Math.random() * (canvas.width / size)) * size;
+                food.y = Math.floor(Math.random() * (canvas.height / size)) * size;
+                valid = true;
+                mines.forEach(m => { if(m.x === food.x && m.y === food.y) valid = false; });
+            }
         }
 
         function generateMine() {
-            let mineX = Math.random() * (canvas.width - size*2) + size;
-            let mineY = Math.random() * (canvas.height - size*2) + size;
-            // Prevent spawning on head
-            if (Math.hypot(mineX - snake.x, mineY - snake.y) < 50) return generateMine();
+            let mineX, mineY, valid = false;
+            while(!valid) {
+                mineX = Math.floor(Math.random() * (canvas.width / size)) * size;
+                mineY = Math.floor(Math.random() * (canvas.height / size)) * size;
+                valid = true;
+                
+                // Don't spawn on snake head
+                if (Math.hypot(mineX - snake.x, mineY - snake.y) < size * 3) valid = false;
+                if (mineX === food.x && mineY === food.y) valid = false;
+            }
             mines.push({x: mineX, y: mineY});
         }
 
-        function changeDirection(event) {
-            if (changingDirection || !currentUser) return;
+        function queueDirection(event) {
+            if (!currentUser) return;
             const key = event.keyCode;
-            const up = snake.vy < 0, down = snake.vy > 0, right = snake.vx > 0, left = snake.vx < 0;
-            const spd = (difficulty === 'hard') ? 3.5 : 2.5;
-
-            if ((key === 37 || key === 65) && !right) { snake.vx = -spd; snake.vy = 0; changingDirection = true; }
-            if ((key === 38 || key === 87) && !down) { snake.vx = 0; snake.vy = -spd; changingDirection = true; }
-            if ((key === 39 || key === 68) && !left) { snake.vx = spd; snake.vy = 0; changingDirection = true; }
-            if ((key === 40 || key === 83) && !up) { snake.vx = 0; snake.vy = spd; changingDirection = true; }
+            
+            // Queue the turn, but prevent 180-degree suicide turns based on current physical direction
+            if ((key === 37 || key === 65) && currentDir !== 'RIGHT') queuedDir = 'LEFT';
+            if ((key === 38 || key === 87) && currentDir !== 'DOWN') queuedDir = 'UP';
+            if ((key === 39 || key === 68) && currentDir !== 'LEFT') queuedDir = 'RIGHT';
+            if ((key === 40 || key === 83) && currentDir !== 'UP') queuedDir = 'DOWN';
         }
 
         function hasGameEnded() {
-            // Wall
-            if (snake.x < 0 || snake.x > canvas.width || snake.y < 0 || snake.y > canvas.height) return true;
-            // Mines
+            // Wall Collision
+            if (snake.x < 0 || snake.x >= canvas.width || snake.y < 0 || snake.y >= canvas.height) return true;
+            
+            // Mine Collision
             for (let m of mines) {
-                if (Math.hypot(snake.x - m.x, snake.y - m.y) < size) return true;
+                if (snake.x === m.x && snake.y === m.y) return true;
             }
-            // Self (Only check segments far enough down the history string)
-            for (let i = 15; i < snakeLength; i++) {
-                let index = i * spacing;
-                if (index < pathHistory.length) {
-                    if (Math.hypot(snake.x - pathHistory[index].x, snake.y - pathHistory[index].y) < size / 1.5) return true;
+            
+            // Self Collision (Only check against grid-aligned body segments)
+            let spacing = size / speed;
+            if (snake.x % size === 0 && snake.y % size === 0) {
+                for (let i = 2; i < snakeLength; i++) {
+                    let index = i * spacing;
+                    if (index < pathHistory.length) {
+                        if (snake.x === pathHistory[index].x && snake.y === pathHistory[index].y) return true;
+                    }
                 }
             }
             return false;
@@ -336,10 +331,11 @@
             cancelAnimationFrame(animationId);
             
             score = 0; scoreElement.innerHTML = score;
-            const spd = (difficulty === 'hard') ? 3.5 : 2.5;
-            snake = { x: 200, y: 200, vx: spd, vy: 0 };
+            speed = (difficulty === 'hard') ? 5 : 4;
+            currentDir = 'RIGHT'; queuedDir = 'RIGHT';
+            snake = { x: 200, y: 200, vx: speed, vy: 0 };
             pathHistory = [];
-            snakeLength = 15;
+            snakeLength = 4;
             mines = [];
             generateFood();
             
@@ -347,35 +343,64 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // --- UI & DATA ---
+        // --- UI & DATA LOGIC ---
         function openModal(id) { isPaused = true; document.getElementById(id).style.display = "flex"; if(id === 'leaderboardModal') loadLeaderboardUI(); }
         function closeModal(id) { document.getElementById(id).style.display = "none"; if(currentUser && !hasGameEnded()) { isPaused = false; requestAnimationFrame(gameLoop); } }
 
         function updateSettings() {
             difficulty = document.getElementById('difficultySelect').value;
-            let spd = (difficulty === 'hard') ? 3.5 : 2.5;
-            if (snake.vx !== 0) snake.vx = (snake.vx > 0) ? spd : -spd;
-            if (snake.vy !== 0) snake.vy = (snake.vy > 0) ? spd : -spd;
+            speed = (difficulty === 'hard') ? 5 : 4;
+            if (snake.vx !== 0) snake.vx = (snake.vx > 0) ? speed : -speed;
+            if (snake.vy !== 0) snake.vy = (snake.vy > 0) ? speed : -speed;
             if (difficulty === 'easy') mines = [];
         }
 
-        function saveLeaderboard(currentScore) {
+        // --- SUPABASE LEADERBOARD (HIGHEST SCORE ONLY) ---
+        async function saveLeaderboard(currentScore) {
             if (currentScore === 0 || !currentUser) return;
-            let scores = JSON.parse(localStorage.getItem('snakeLeaderboard')) || [];
-            scores.push({ user: currentUser, score: currentScore, mode: difficulty.toUpperCase() });
-            scores.sort((a, b) => b.score - a.score);
-            localStorage.setItem('snakeLeaderboard', JSON.stringify(scores.slice(0, 5)));
+            
+            // 1. Check if user already exists in the database
+            const { data: existingData, error: fetchError } = await supabase
+                .from('global_leaderboard')
+                .select('*')
+                .eq('username', currentUser);
+
+            if (fetchError) { console.error("Fetch Error:", fetchError); return; }
+
+            if (existingData && existingData.length > 0) {
+                // 2. If user exists, ONLY update if the new score is higher
+                if (currentScore > existingData[0].score) {
+                    await supabase
+                        .from('global_leaderboard')
+                        .update({ score: currentScore, mode: difficulty.toUpperCase() })
+                        .eq('username', currentUser);
+                }
+            } else {
+                // 3. New user, insert their first score
+                await supabase
+                    .from('global_leaderboard')
+                    .insert([{ username: currentUser, score: currentScore, mode: difficulty.toUpperCase() }]);
+            }
         }
 
-        function loadLeaderboardUI() {
+        async function loadLeaderboardUI() {
             const list = document.getElementById('leaderboardList');
+            list.innerHTML = "<li>Loading...</li>"; 
+            
+            const { data: scores, error } = await supabase
+                .from('global_leaderboard')
+                .select('*')
+                .order('score', { ascending: false }) 
+                .limit(5); 
+
+            if (error) return list.innerHTML = "<li>Failed to load leaderboard.</li>";
+
             list.innerHTML = "";
-            let scores = JSON.parse(localStorage.getItem('snakeLeaderboard')) || [];
             if(scores.length === 0) return list.innerHTML = "<li>No scores yet!</li>";
 
             scores.forEach((entry, index) => {
                 const li = document.createElement('li');
-                li.innerHTML = `<div class="rank-user"><strong>#${index + 1}</strong> <span>${entry.user}</span></div>
+                li.innerHTML = `<div class="rank-user"><strong>#${index + 1}</strong> <span>${entry.username}</span></div>
                                 <div class="score-mode"><strong>${entry.score} pts</strong> <br><span style="font-size: 10px; color:#9ca3af;">${entry.mode}</span></div>`;
                 list.appendChild(li);
             });
