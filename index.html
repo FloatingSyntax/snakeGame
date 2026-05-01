@@ -255,7 +255,6 @@
             const arrows = [37, 38, 39, 40];
             const wasd = [65, 87, 68, 83];
             
-            // WASD and Arrows to restart
             if (gameState === 'DEAD' && (arrows.includes(key) || wasd.includes(key))) {
                 restartGame();
                 return;
@@ -284,7 +283,7 @@
                 updatePhysics();
                 updateParticles();
             } else if (gameState === 'DEAD') {
-                updateParticles(); // Let death animations finish
+                updateParticles(); 
             }
 
             renderGraphics();
@@ -292,11 +291,10 @@
         }
 
         function createExplosion(x, y) {
-            // Denser, bigger, fire-like explosion
             for(let i=0; i<150; i++) {
                 let angle = Math.random() * Math.PI * 2;
                 let force = Math.random() * 12 + 2; 
-                let cols = ['#ffeb3b', '#ff9800', '#f44336', '#d32f2f', '#424242']; // Yellow, orange, reds, dark smoke
+                let cols = ['#ffeb3b', '#ff9800', '#f44336', '#d32f2f', '#424242']; 
                 let col = cols[Math.floor(Math.random() * cols.length)];
                 particles.push({
                     x: x, y: y,
@@ -310,7 +308,6 @@
         }
 
         function createBloodSplat(x, y) {
-            // Blood marks for body/ground
             for(let i=0; i<40; i++) {
                 let angle = Math.random() * Math.PI * 2;
                 let dist = Math.random() * 20;
@@ -327,9 +324,30 @@
                 let p = particles[i];
                 p.x += p.vx;
                 p.y += p.vy;
-                p.vx *= 0.95; p.vy *= 0.95; // Friction
+                p.vx *= 0.95; p.vy *= 0.95; 
                 if (gameState === 'PLAYING' || gameState === 'DEAD') p.life -= 0.015;
                 if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function triggerDeath() {
+            gameState = 'DEAD';
+            saveLeaderboard(score);
+            
+            // The Bounceback Effect: Shove the whole snake history backwards
+            const bounceDist = speed * 3;
+            let bx = 0, by = 0;
+            if(snake.vx > 0) bx = -bounceDist;
+            if(snake.vx < 0) bx = bounceDist;
+            if(snake.vy > 0) by = -bounceDist;
+            if(snake.vy < 0) by = bounceDist;
+
+            snake.x += bx;
+            snake.y += by;
+            
+            for(let i = 0; i < pathHistory.length; i++) {
+                pathHistory[i].x += bx;
+                pathHistory[i].y += by;
             }
         }
 
@@ -364,16 +382,14 @@
             let hitMineIndex = mines.findIndex(m => Math.hypot((m.x + size/2) - cx, (m.y + size/2) - cy) < size * 0.8);
             
             if (hitMineIndex !== -1) {
-                gameState = 'DEAD';
-                saveLeaderboard(score);
+                triggerDeath();
                 createExplosion(mines[hitMineIndex].x + size/2, mines[hitMineIndex].y + size/2);
                 mines.splice(hitMineIndex, 1);
             }
 
             // Wall Collision
             if (snake.x < 0 || snake.x >= canvas.width || snake.y < 0 || snake.y >= canvas.height) {
-                gameState = 'DEAD';
-                saveLeaderboard(score);
+                triggerDeath();
             }
 
             // Self Collision
@@ -382,8 +398,7 @@
                     let index = i * spacing;
                     if (index < pathHistory.length) {
                         if (snake.x === pathHistory[index].x && snake.y === pathHistory[index].y) {
-                            gameState = 'DEAD';
-                            saveLeaderboard(score);
+                            triggerDeath();
                             createBloodSplat(snake.x + size/2, snake.y + size/2);
                         }
                     }
@@ -425,7 +440,6 @@
 
             for (let i = snakeLength - 1; i >= 0; i--) {
                 let index = i * spacing;
-                // BUG FIX: Clamp index so snake doesn't disappear when starting
                 if (index >= pathHistory.length) index = pathHistory.length - 1; 
                 
                 let pos = pathHistory[index];
@@ -445,7 +459,6 @@
                     else if (currentDir === 'DOWN') { ex1 = -d; ey1 = d; ex2 = d; ey2 = d; }
 
                     if (gameState === 'DEAD') {
-                        // "x x" Dead Eyes
                         ctx.fillStyle = 'white';
                         ctx.font = 'bold 12px Arial';
                         ctx.textAlign = 'center';
@@ -453,7 +466,6 @@
                         ctx.fillText('x', pos.x + size/2 + ex1, pos.y + size/2 + ey1 + 1);
                         ctx.fillText('x', pos.x + size/2 + ex2, pos.y + size/2 + ey2 + 1);
                     } else {
-                        // Normal Eyes
                         ctx.fillStyle = '#000000';
                         ctx.beginPath(); ctx.arc(pos.x + size/2 + ex1, pos.y + size/2 + ey1, 2.5, 0, Math.PI*2); ctx.fill();
                         ctx.beginPath(); ctx.arc(pos.x + size/2 + ex2, pos.y + size/2 + ey2, 2.5, 0, Math.PI*2); ctx.fill();
@@ -461,9 +473,9 @@
                 }
             }
 
-            // Blood Splatters (Drawn after snake so it covers body & ground)
+            // Blood Splatters
             if (bloodSplatters.length > 0) {
-                ctx.fillStyle = 'rgba(200, 0, 0, 0.6)'; // Transparent red
+                ctx.fillStyle = 'rgba(200, 0, 0, 0.6)'; 
                 bloodSplatters.forEach(b => {
                     ctx.beginPath(); ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2); ctx.fill();
                 });
@@ -477,24 +489,19 @@
             }
 
             if (gameState === 'DEAD') {
-                // GTA Wasted Styling
-                // Dark band across middle, transparent background
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'; 
                 ctx.fillRect(0, canvas.height/2 - 45, canvas.width, 90);
                 
-                // Text
                 ctx.font = 'bold 50px Impact, "Arial Black", sans-serif';
                 ctx.textAlign = 'center'; 
                 ctx.textBaseline = 'middle';
                 
-                // Outline and Fill
                 ctx.lineWidth = 3;
                 ctx.strokeStyle = 'black';
                 ctx.strokeText('WASTED', canvas.width/2, canvas.height/2);
                 ctx.fillStyle = 'white';
                 ctx.fillText('WASTED', canvas.width/2, canvas.height/2);
                 
-                // Subtext
                 ctx.font = "16px Arial";
                 ctx.fillStyle = 'white';
                 ctx.fillText("Use Arrow Keys or WASD to Restart", canvas.width/2, canvas.height/2 + 65);
@@ -533,7 +540,6 @@
             currentDir = 'RIGHT'; queuedDir = 'RIGHT';
             snake = { x: 200, y: 200, vx: 0, vy: 0 };
             
-            // Generate full body at start point
             pathHistory = [];
             let spacing = size / speed; 
             for(let i=0; i<=snakeLength * spacing; i++) pathHistory.push({x:200, y:200});
